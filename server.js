@@ -743,11 +743,13 @@ class Room {
         if (tile === T.SWITCH && p.vy < 0) {
           this.toggleGates();
           chunk.setTile(tx, ty, T.AIR);
-          this.events.push({ type: 'switch', x: (cx * CHUNK_W + tx) * TILE_SIZE, y: ty * TILE_SIZE });
+          const gx = cx * CHUNK_W + tx;
+          this.events.push({ type: 'switch', x: gx * TILE_SIZE, y: ty * TILE_SIZE, gx, gy: ty });
         } else if (tile === T.QUESTION && p.vy < 0) {
           chunk.setTile(tx, ty, T.BRICK);
           const roll = Math.random();
-          const px = (cx * CHUNK_W + tx) * TILE_SIZE + TILE_SIZE / 2;
+          const gx = cx * CHUNK_W + tx;
+          const px = gx * TILE_SIZE + TILE_SIZE / 2;
           const py = (ty - 1) * TILE_SIZE + TILE_SIZE / 2;
           if (roll < 0.25) chunk.addPowerUp('heart', px, py);
           else if (roll < 0.5) chunk.addPowerUp('star', px, py);
@@ -755,7 +757,7 @@ class Room {
           else {
             for (let i = 0; i < 3; i++) chunk.addCoin(px + (i - 1) * 10, py);
           }
-          this.events.push({ type: 'switch', x: px, y: ty * TILE_SIZE }); // reuse sound event
+          this.events.push({ type: 'question', x: px, y: ty * TILE_SIZE, gx, gy: ty });
         }
       }
     }

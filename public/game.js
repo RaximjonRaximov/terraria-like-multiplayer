@@ -430,7 +430,8 @@ socket.on('state', (data) => {
 
   if (data.events) {
     for (const ev of data.events) {
-      if (ev.type === 'switch') { showBanner('Gate opened!'); spawnParticles(ev.x, ev.y, 15, '#facc15', 4); }
+      if (ev.type === 'switch') { showBanner('Gate opened!'); spawnParticles(ev.x, ev.y, 15, '#facc15', 4); if (ev.gx !== undefined) setTileAt(ev.gx, ev.gy, T.AIR); }
+      if (ev.type === 'question') { spawnParticles(ev.x, ev.y, 15, '#f59e0b', 4); playSound('coin'); if (ev.gx !== undefined) setTileAt(ev.gx, ev.gy, T.BRICK); }
       if (ev.type === 'mission-complete') { showBanner('Mission complete! +' + ev.reward); spawnParticles(canvas.width / 2 + state.camera.x, canvas.height / 2 + state.camera.y, 30, '#fbbf24', 6); playSound('flag'); }
       if (ev.type === 'coin') { spawnParticles(ev.x, ev.y, 5, '#facc15', 3, 2); playSound('coin'); }
       if (ev.type === 'stomp') { spawnParticles(ev.x, ev.y, 10, '#94a3b8', 3, 3); playSound('stomp'); }
@@ -443,7 +444,14 @@ socket.on('state', (data) => {
 });
 
 socket.on('die', () => { showBanner('You died! Score penalty', 2500); });
-socket.on('gates-open', () => { showBanner('Gates opened!'); });
+socket.on('gates-open', () => {
+  showBanner('Gates opened!');
+  for (const chunk of state.chunks.values()) {
+    for (let i = 0; i < chunk.tiles.length; i++) {
+      if (chunk.tiles[i] === T.GATE) chunk.tiles[i] = T.AIR;
+    }
+  }
+});
 
 function updateRoomUI(info) {
   if (!info || info.id !== state.roomId) return;
@@ -472,6 +480,15 @@ function globalTile(gx, gy) {
   const tx = gx - cx * CHUNK_W;
   if (tx < 0 || tx >= CHUNK_W || gy < 0 || gy >= CHUNK_H) return 0;
   return chunk.tiles[gy * CHUNK_W + tx];
+}
+
+function setTileAt(gx, gy, t) {
+  const cx = Math.floor(gx / CHUNK_W);
+  const chunk = getChunk(cx);
+  if (!chunk) return;
+  const tx = gx - cx * CHUNK_W;
+  if (tx < 0 || tx >= CHUNK_W || gy < 0 || gy >= CHUNK_H) return;
+  chunk.tiles[gy * CHUNK_W + tx] = t;
 }
 
 function currentBiome() {
