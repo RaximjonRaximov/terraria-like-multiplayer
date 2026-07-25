@@ -33,6 +33,14 @@ const BIOME_GROUND = {
   forest: { top: '#22c55e', body: '#3f2e18' }
 };
 
+const BIOME_PARALLAX = {
+  grass: ['rgba(34,197,94,0.12)', 'rgba(34,197,94,0.18)'],
+  desert: ['rgba(217,119,6,0.12)', 'rgba(251,191,36,0.18)'],
+  snow: ['rgba(255,255,255,0.15)', 'rgba(255,255,255,0.22)'],
+  cave: ['rgba(15,23,42,0.2)', 'rgba(30,41,59,0.25)'],
+  forest: ['rgba(22,101,52,0.15)', 'rgba(21,128,61,0.22)']
+};
+
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 ctx.imageSmoothingEnabled = false;
@@ -565,8 +573,9 @@ function drawSky() {
   }
 
   // parallax hills/trees per biome
-  drawParallaxLayer('rgba(255,255,255,0.08)', 0.15, 150, 40, 3);
-  drawParallaxLayer('rgba(255,255,255,0.12)', 0.35, 100, 30, 2);
+  const par = BIOME_PARALLAX[state.biome] || BIOME_PARALLAX.grass;
+  drawParallaxLayer(par[0], 0.15, 150, 40, 3);
+  drawParallaxLayer(par[1], 0.35, 100, 30, 2);
 }
 
 function drawParallaxLayer(color, speed, height, amp, freq) {
