@@ -54,6 +54,7 @@ const ui = {
   inputCode: document.getElementById('room-code'),
   hudCoins: document.getElementById('hud-coins'),
   hudScore: document.getElementById('hud-score'),
+  hudBest: document.getElementById('hud-best'),
   hudDist: document.getElementById('hud-dist'),
   hudMission: document.getElementById('hud-mission'),
   hudBiome: document.getElementById('hud-biome'),
@@ -433,6 +434,11 @@ function updateHUD() {
   ui.hudCoins.textContent = me.coins || 0;
   ui.hudScore.textContent = me.score || 0;
   ui.hudDist.textContent = Math.floor((me.distance || 0) / 10);
+  try {
+    const best = Math.max(parseInt(localStorage.getItem('endlessHighScore') || '0', 10), me.score || 0);
+    localStorage.setItem('endlessHighScore', best);
+    ui.hudBest.textContent = best;
+  } catch (e) {}
   ui.hudBiome.textContent = state.biome;
   updateHealth(me.health, me.maxHealth);
   setMissionText(state.mission);
