@@ -63,6 +63,7 @@ const ui = {
   inputName: document.getElementById('player-name'),
   inputCode: document.getElementById('room-code'),
   hudCoins: document.getElementById('hud-coins'),
+  hudLives: document.getElementById('hud-lives'),
   hudScore: document.getElementById('hud-score'),
   hudBest: document.getElementById('hud-best'),
   hudDist: document.getElementById('hud-dist'),
@@ -480,6 +481,7 @@ socket.on('state', (data) => {
       if (ev.type === 'stomp') { spawnParticles(ev.x, ev.y, 10, '#94a3b8', 3, 3); playSound('stomp'); }
       if (ev.type === 'hurt') { playSound('hurt'); }
       if (ev.type === 'combo') { showBanner('Combo x' + ev.combo + '!', 1200); playSound('coin'); }
+      if (ev.type === '1up') { showBanner('1UP!', 2000); spawnParticles(ev.x, ev.y, 20, '#4ade80', 5); playSound('flag'); }
       if (ev.type === 'boss-dead') { showBanner('BOSS DEFEATED! +200', 2500); spawnParticles(ev.x, ev.y, 40, '#f97316', 6); playSound('stomp'); }
       if (ev.type === 'heart') { spawnParticles(ev.x, ev.y, 8, '#ef4444', 3, 3); showBanner('+Health'); playSound('coin'); }
       if (ev.type === 'star') { spawnParticles(ev.x, ev.y, 12, '#facc15', 5, 4); showBanner('Star Power!'); playSound('star'); }
@@ -550,6 +552,7 @@ function updateHUD() {
   const me = state.players.get(state.me);
   if (!me) return;
   ui.hudCoins.textContent = me.coins || 0;
+  ui.hudLives.textContent = me.lives || 0;
   ui.hudScore.textContent = me.score || 0;
   ui.hudDist.textContent = Math.floor((me.distance || 0) / 10);
   try {

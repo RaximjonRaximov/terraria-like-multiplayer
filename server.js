@@ -353,7 +353,8 @@ class Room {
       checkpointChunk: 0,
       checkpointTx: 3,
       combo: 0,
-      comboTimer: 0
+      comboTimer: 0,
+      lives: 3
     };
     this.players.set(socket.id, p);
     this.sockets.set(socket.id, socket);
@@ -593,7 +594,7 @@ class Room {
         id: other.id, name: other.name, color: other.color,
         x: other.x, y: other.y, vx: other.vx, vy: other.vy,
         w: other.w, h: other.h,
-        score: other.score, health: other.health, maxHealth: other.maxHealth,
+        score: other.score, health: other.health, maxHealth: other.maxHealth, lives: other.lives,
         invincible: other.invincible, starTimer: other.starTimer, wingTimer: other.wingTimer, grounded: other.grounded, facing: other.vx >= 0 ? 1 : -1
       });
     }
@@ -614,7 +615,7 @@ class Room {
       id: p.id, name: p.name, color: p.color,
       x: p.x, y: p.y, vx: p.vx, vy: p.vy,
       w: p.w, h: p.h,
-      score: p.score, health: p.health, maxHealth: p.maxHealth,
+      score: p.score, health: p.health, maxHealth: p.maxHealth, lives: p.lives,
       invincible: p.invincible, starTimer: p.starTimer, wingTimer: p.wingTimer, grounded: p.grounded, facing: p.vx >= 0 ? 1 : -1,
       distance: p.distance, self: true
     };
@@ -748,6 +749,10 @@ class Room {
         if (c.type === 'coin') {
           c.collected = true;
           p.coins++; p.score += 10;
+          if (p.coins >= 100) {
+            p.coins -= 100; p.lives++; p.score += 50;
+            this.events.push({ type: '1up', x: c.x, y: c.y });
+          }
           this.events.push({ type: 'coin', x: c.x, y: c.y });
         } else if (c.type === 'heart') {
           c.collected = true;
@@ -903,6 +908,11 @@ class Room {
   }
 
   respawn(p) {
+    p.lives = Math.max(0, p.lives - 1);
+    if (p.lives <= 0) {
+      p.score = 0; p.coins = 0; p.kills = 0; p.combo = 0; p.comboTimer = 0;
+      p.lives = 3; // restart lives
+    }
     p.health = p.maxHealth;
     p.starTimer = 0;
     p.wingTimer = 0;
