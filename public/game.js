@@ -303,15 +303,24 @@ bindTouch('btn-left', 'left');
 bindTouch('btn-right', 'right');
 bindTouch('btn-jump', 'jump');
 
+function saveName() {
+  try { localStorage.setItem('endlessPlayerName', ui.inputName.value.trim()); } catch (e) {}
+}
+function loadName() {
+  try { ui.inputName.value = localStorage.getItem('endlessPlayerName') || ''; } catch (e) {}
+}
+loadName();
+
 ui.btnCreate.addEventListener('click', () => {
   initAudio();
   const name = ui.inputName.value.trim();
+  saveName();
   socket.emit('create-room', { playerName: name, name: name || undefined });
 });
-ui.btnJoin.addEventListener('click', () => { initAudio(); joinRoom(); });
+ui.btnJoin.addEventListener('click', () => { initAudio(); saveName(); joinRoom(); });
 ui.btnLeave.addEventListener('click', leaveRoom);
 ui.btnStart.addEventListener('click', () => { initAudio(); startGame(); });
-ui.inputCode.addEventListener('keydown', (e) => { if (e.key === 'Enter') { initAudio(); joinRoom(); } });
+ui.inputCode.addEventListener('keydown', (e) => { if (e.key === 'Enter') { initAudio(); saveName(); joinRoom(); } });
 
 function createRoom() {
   const name = ui.inputName.value.trim();
