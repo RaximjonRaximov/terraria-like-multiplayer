@@ -72,7 +72,10 @@ const ui = {
   health: document.getElementById('health'),
   players: document.getElementById('players'),
   banner: document.getElementById('banner'),
-  lobbyBest: document.getElementById('lobby-best')
+  lobbyBest: document.getElementById('lobby-best'),
+  chat: document.getElementById('chat'),
+  chatLog: document.getElementById('chat-log'),
+  chatInput: document.getElementById('chat-input')
 };
 
 const socket = io();
@@ -293,6 +296,36 @@ function showBanner(text, duration = 2000) {
   ui.banner.textContent = text;
   ui.banner.classList.remove('hidden');
   setTimeout(() => ui.banner.classList.add('hidden'), duration);
+}
+
+let chatActive = false;
+function openChat() {
+  chatActive = true;
+  ui.chat.classList.remove('hidden');
+  ui.chatInput.focus();
+}
+function closeChat() {
+  chatActive = false;
+  ui.chatInput.value = '';
+  ui.chat.classList.add('hidden');
+  input.left = input.right = input.jump = input.run = false;
+}
+function sendChat() {
+  const text = ui.chatInput.value.trim();
+  if (!text) { closeChat(); return; }
+  socket.emit('chat', text);
+  ui.chatInput.value = '';
+  closeChat();
+}
+function appendChat(name, text) {
+  const div = document.createElement('div');
+  div.innerHTML = `<b>${escapeHtml(name)}:</b> ${escapeHtml(text)}`;
+  ui.chatLog.appendChild(div);
+  ui.chatLog.scrollTop = ui.chatLog.scrollHeight;
+  if (ui.chatLog.children.length > 50) ui.chatLog.firstChild.remove();
+}
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function setMissionText(m) {
@@ -567,14 +600,27 @@ const keyMap = {
   ShiftLeft: 'run', ShiftRight: 'run'
 };
 window.addEventListener('keydown', (e) => {
+  if (chatActive) {
+    if (e.code === 'Escape') { e.preventDefault(); closeChat(); }
+    return;
+  }
+  if (e.code === 'KeyT') { e.preventDefault(); openChat(); return; }
   initAudio();
   const a = keyMap[e.code];
   if (a) { input[a] = true; e.preventDefault(); }
 });
 window.addEventListener('keyup', (e) => {
+  if (chatActive) return;
   const a = keyMap[e.code];
   if (a) { input[a] = false; e.preventDefault(); }
 });
+
+ui.chatInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); sendChat(); }
+  if (e.key === 'Escape') { e.preventDefault(); closeChat(); }
+});
+
+socket.on('chat', (d) => { appendChat(d.name, d.text); });
 
 setInterval(() => {
   if (state.connected) socket.emit('input', input);

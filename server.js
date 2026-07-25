@@ -1043,6 +1043,16 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('chat', (text) => {
+    const room = findRoomBySocket(socket.id);
+    if (!room) return;
+    const p = room.players.get(socket.id);
+    if (!p) return;
+    const msg = String(text).trim().slice(0, 120);
+    if (!msg) return;
+    io.to(room.id).emit('chat', { name: p.name, text: msg });
+  });
+
   socket.on('disconnect', () => {
     const roomId = socketRoom.get(socket.id);
     if (!roomId) return;
