@@ -36,7 +36,8 @@ const T = {
   GATE: 7,
   POLE: 8,
   FLAG: 9,
-  QUESTION: 10
+  QUESTION: 10,
+  CRUMBLE: 11
 };
 
 const SOLID = {
@@ -44,7 +45,8 @@ const SOLID = {
   [T.BRICK]: true,
   [T.PIPE]: true,
   [T.GATE]: true,
-  [T.QUESTION]: true
+  [T.QUESTION]: true,
+  [T.CRUMBLE]: true
 };
 const ONE_WAY = { [T.PLATFORM]: true };
 const HAZARD = { [T.SPIKE]: true };
@@ -79,6 +81,7 @@ class Chunk {
     this.entities = [];
     this.loadedBy = new Set();
     this.flagsCollected = new Set();
+    this.crumbling = new Map();
     this.generate();
   }
 
@@ -136,9 +139,13 @@ class Chunk {
       if (g < 10) continue;
       const kind = rng();
       if (kind < 0.25) {
-        // brick/question block
+        // brick/question/crumble block
         const y = g - 4 - Math.floor(rng() * 2);
-        if (this.getTile(tx, y) === T.AIR) this.setTile(tx, y, rng() < 0.4 ? T.QUESTION : T.BRICK);
+        if (this.getTile(tx, y) === T.AIR) {
+          let t = rng() < 0.4 ? T.QUESTION : T.BRICK;
+          if ((biome === 'cave' || biome === 'desert') && rng() < 0.3) t = T.CRUMBLE;
+          this.setTile(tx, y, t);
+        }
       } else if (kind < 0.55) {
         // platform with coins
         const y = g - 5 - Math.floor(rng() * 4);
@@ -462,6 +469,8 @@ class Room {
     for (const p of this.players.values()) this.updatePlayer(p);
     // update entities
     this.updateEntities();
+    // update crumbling platforms
+    this.updateCrumbling();
     // check mission progress (room-wide)
     this.updateMission();
 
@@ -610,6 +619,11 @@ class Room {
     p.prevY = p.y;
     p.y += p.vy;
     this.resolveY(p, p.h);
+    if (p.grounded) {
+      const footX = Math.floor((p.x + p.w / 2) / TILE_SIZE);
+      const footY = Math.floor((p.y + p.h) / TILE_SIZE);
+      if (this.globalTile(footX, footY) === T.CRUMBLE) this.startCrumble(footX, footY);
+    }
     p.x += p.vx;
     this.resolveX(p, p.w, p.h);
 
@@ -688,6 +702,17 @@ class Room {
     const cx = Math.floor(x / CHUNK_W / TILE_SIZE);
     const chunk = this.chunks.get(cx);
     return chunk ? chunk.biome : 'grass';
+  }
+
+  startCrumble(gx, gy) {
+    const cx = Math.floor(gx / CHUNK_W);
+    const chunk = this.chunks.get(cx);
+    if (!chunk) return;
+    const tx = gx - cx * CHUNK_W;
+    if (!chunk.inBounds(tx, gy)) return;
+    const idx = gy * CHUNK_W + tx;
+    if (chunk.tiles[idx] !== T.CRUMBLE || chunk.crumbling.has(idx)) return;
+    chunk.crumbling.set(idx, 60);
   }
 
   checkCollectibles(p) {
@@ -847,6 +872,24 @@ class Room {
     p.vx = 0; p.vy = 0;
     p.invincible = 120;
     p.socket.emit('die', { score: p.score });
+  }
+
+  updateCrumbling() {
+    for (const chunk of this.chunks.values()) {
+      for (const [idx, timer] of chunk.crumbling.entries()) {
+        const newTimer = timer - 1;
+        if (newTimer <= 0) {
+          const tx = idx % CHUNK_W;
+          const ty = Math.floor(idx / CHUNK_W);
+          chunk.setTile(tx, ty, T.AIR);
+          chunk.crumbling.delete(idx);
+          const gx = chunk.cx * CHUNK_W + tx;
+          this.broadcast('tile-update', { gx, gy: ty, t: T.AIR });
+        } else {
+          chunk.crumbling.set(idx, newTimer);
+        }
+      }
+    }
   }
 
   updateEntities() {

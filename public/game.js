@@ -14,7 +14,9 @@ const T = {
   SWITCH: 6,
   GATE: 7,
   POLE: 8,
-  FLAG: 9
+  FLAG: 9,
+  QUESTION: 10,
+  CRUMBLE: 11
 };
 
 const BIOME_SKY = {
@@ -445,6 +447,7 @@ socket.on('state', (data) => {
 });
 
 socket.on('die', () => { showBanner('You died! Score penalty', 2500); });
+socket.on('tile-update', (d) => { if (d && d.gx !== undefined) setTileAt(d.gx, d.gy, d.t); });
 socket.on('gates-open', () => {
   showBanner('Gates opened!');
   for (const chunk of state.chunks.values()) {
@@ -655,6 +658,16 @@ function drawTile(tx, ty, t, biome) {
     ctx.strokeStyle = '#cbd5e1';
     ctx.lineWidth = 2;
     ctx.strokeRect(x, y, TILE_SIZE, TILE_SIZE);
+  } else if (t === T.CRUMBLE) {
+    ctx.fillStyle = '#78716c';
+    ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+    ctx.strokeStyle = '#44403c';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x + 4, y + 4); ctx.lineTo(x + 12, y + 12);
+    ctx.moveTo(x + TILE_SIZE - 4, y + 4); ctx.lineTo(x + TILE_SIZE - 12, y + 12);
+    ctx.moveTo(x + 4, y + TILE_SIZE - 4); ctx.lineTo(x + 10, y + TILE_SIZE - 10);
+    ctx.stroke();
   } else if (t === T.QUESTION) {
     ctx.fillStyle = '#f59e0b';
     ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
