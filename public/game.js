@@ -101,6 +101,8 @@ const state = {
 let assets = {};
 const particles = [];
 const weather = [];
+const minimap = document.getElementById('minimap');
+const mmCtx = minimap ? minimap.getContext('2d') : null;
 
 class Particle {
   constructor(x, y, vx, vy, life, color, size) {
@@ -1030,7 +1032,51 @@ function gameLoop() {
     }
   }
 
+  if (state.frame % 15 === 0) drawMinimap();
+
   requestAnimationFrame(gameLoop);
+}
+
+function drawMinimap() {
+  if (!mmCtx || !minimap) return;
+  const me = state.players.get(state.me);
+  if (!me) return;
+  const mw = minimap.width, mh = minimap.height;
+  const scale = 0.03;
+  mmCtx.clearRect(0, 0, mw, mh);
+  const cx = mw / 2;
+  const cy = mh / 2;
+  // draw chunks
+  for (const chunk of state.chunks.values()) {
+    const bx = cx + (chunk.cx * CHUNK_W * TILE_SIZE - me.x - me.w / 2) * scale;
+    const by = cy + (0 - me.y - me.h / 2) * scale;
+    const cw = CHUNK_W * TILE_SIZE * scale;
+    const ch = CHUNK_H * TILE_SIZE * scale;
+    const biome = chunk.biome;
+    const biomeColors = { grass: 'rgba(34,197,94,0.35)', desert: 'rgba(217,119,6,0.35)', snow: 'rgba(255,255,255,0.35)', cave: 'rgba(30,41,59,0.5)', forest: 'rgba(22,101,52,0.35)' };
+    mmCtx.fillStyle = biomeColors[biome] || 'rgba(100,116,139,0.3)';
+    mmCtx.fillRect(bx, by, cw, ch);
+    mmCtx.strokeStyle = 'rgba(255,255,255,0.08)';
+    mmCtx.strokeRect(bx, by, cw, ch);
+  }
+  // entities
+  for (const e of state.entities.values()) {
+    const ex = cx + (e.x + e.w / 2 - me.x - me.w / 2) * scale;
+    const ey = cy - (e.y + e.h / 2 - me.y - me.h / 2) * scale;
+    if (e.type === 'coin') { mmCtx.fillStyle = '#facc15'; mmCtx.fillRect(ex - 1, ey - 1, 2, 2); }
+    else if (['walker','jumper','flyer','spikebug','saw','boss'].includes(e.type)) { mmCtx.fillStyle = '#ef4444'; mmCtx.fillRect(ex - 2, ey - 2, 4, 4); }
+  }
+  // other players
+  for (const p of state.players.values()) {
+    if (p.id === state.me) continue;
+    const px = cx + (p.x + p.w / 2 - me.x - me.w / 2) * scale;
+    const py = cy - (p.y + p.h / 2 - me.y - me.h / 2) * scale;
+    mmCtx.fillStyle = p.color || '#38bdf8';
+    mmCtx.beginPath(); mmCtx.arc(px, py, 3, 0, Math.PI * 2); mmCtx.fill();
+  }
+  // self
+  mmCtx.fillStyle = '#4ade80';
+  mmCtx.beginPath(); mmCtx.arc(cx, cy, 3.5, 0, Math.PI * 2); mmCtx.fill();
 }
 
 loadAssets().then(() => {
