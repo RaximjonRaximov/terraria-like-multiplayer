@@ -103,6 +103,14 @@ class Chunk {
     const biome = this.biome;
     const difficulty = Math.floor(Math.abs(this.cx) / 3);
 
+    // biome-specific generation tweaks
+    let pitExtra = 0, enemyExtra = 0, featureExtra = 0, sawExtra = 0;
+    let flyerThresh = 0.7, jumperThresh = 0.9;
+    if (biome === 'desert') { pitExtra = 1; enemyExtra = -1; sawExtra = 1; }
+    if (biome === 'snow') { featureExtra = 2; }
+    if (biome === 'cave') { enemyExtra = 1; sawExtra = 1; flyerThresh = 0.55; jumperThresh = 0.85; }
+    if (biome === 'forest') { featureExtra = 1; sawExtra = -1; }
+
     // ground
     for (let tx = 0; tx < CHUNK_W; tx++) {
       const globalX = this.cx * CHUNK_W + tx;
@@ -111,7 +119,7 @@ class Chunk {
     }
 
     // pits
-    const pitCount = Math.floor(rng() * (1 + difficulty * 0.2)) + 1;
+    const pitCount = Math.floor(rng() * (1 + difficulty * 0.2)) + 1 + pitExtra;
     for (let i = 0; i < pitCount; i++) {
       const start = Math.floor(rng() * (CHUNK_W - 8)) + 2;
       const len = 2 + Math.floor(rng() * 3);
@@ -121,7 +129,7 @@ class Chunk {
     }
 
     // platforms / bricks / coins
-    const featureCount = 4 + Math.floor(rng() * 5) + difficulty;
+    const featureCount = 4 + Math.floor(rng() * 5) + difficulty + featureExtra;
     for (let i = 0; i < featureCount; i++) {
       const tx = Math.floor(rng() * (CHUNK_W - 6)) + 1;
       const g = this.findGroundY(tx);
@@ -163,7 +171,7 @@ class Chunk {
     }
 
     // enemies
-    const enemyCount = 2 + Math.floor(rng() * 3) + Math.floor(difficulty / 2);
+    const enemyCount = 2 + Math.floor(rng() * 3) + Math.floor(difficulty / 2) + enemyExtra;
     for (let i = 0; i < enemyCount; i++) {
       const tx = Math.floor(rng() * (CHUNK_W - 4)) + 2;
       const g = this.findGroundY(tx);
@@ -172,13 +180,13 @@ class Chunk {
       const x = this.cx * CHUNK_W * TILE_SIZE + tx * TILE_SIZE;
       const y = g * TILE_SIZE - 40;
       if (roll < 0.45) this.addEnemy('walker', x, y);
-      else if (roll < 0.7) this.addEnemy('flyer', x, y - 80 - rng() * 60);
-      else if (roll < 0.9) this.addEnemy('jumper', x, y);
+      else if (roll < flyerThresh) this.addEnemy('flyer', x, y - 80 - rng() * 60);
+      else if (roll < jumperThresh) this.addEnemy('jumper', x, y);
       else this.addEnemy('spikebug', x, y);
     }
 
     // moving saws
-    const sawCount = Math.floor(rng() * 2) + Math.floor(difficulty / 3);
+    const sawCount = Math.max(0, Math.floor(rng() * 2) + Math.floor(difficulty / 3) + sawExtra);
     for (let i = 0; i < sawCount; i++) {
       const tx = Math.floor(rng() * (CHUNK_W - 4)) + 2;
       const g = this.findGroundY(tx);
@@ -314,7 +322,9 @@ class Room {
       input: {},
       loadedChunks: new Set(),
       distance: 0,
-      mission: null
+      mission: null,
+      checkpointChunk: 0,
+      checkpointTx: 3
     };
     this.players.set(socket.id, p);
     this.sockets.set(socket.id, socket);
@@ -339,7 +349,9 @@ class Room {
     this.generateSpawnChunks();
     let i = 0;
     for (const p of this.players.values()) {
-      p.x = (3 + i * 2) * TILE_SIZE;
+      p.checkpointChunk = 0;
+      p.checkpointTx = Math.min(CHUNK_W - 4, 3 + i * 2);
+      p.x = p.checkpointTx * TILE_SIZE;
       p.y = (this.findGroundY(Math.floor(p.x / TILE_SIZE)) - 3) * TILE_SIZE;
       p.prevY = p.y;
       i++;
@@ -755,6 +767,8 @@ class Room {
         if (chunk.getTile(tx, ty) === T.FLAG && !chunk.flagsCollected.has(p.id)) {
           chunk.flagsCollected.add(p.id);
           p.score += 100;
+          p.checkpointChunk = cx;
+          p.checkpointTx = tx;
           this.events.push({ type: 'flag', x: (cx * CHUNK_W + tx) * TILE_SIZE, y: ty * TILE_SIZE, biome: chunk.biome });
         }
       }
@@ -814,8 +828,10 @@ class Room {
     p.wingTimer = 0;
     p.airJumps = 0;
     p.score = Math.max(0, p.score - 50);
-    p.x = 3 * TILE_SIZE;
-    p.y = (this.findGroundY(3) - 3) * TILE_SIZE;
+    const gx = p.checkpointChunk * CHUNK_W + p.checkpointTx;
+    p.x = gx * TILE_SIZE;
+    const ground = this.findGroundY(gx);
+    p.y = (Math.max(2, ground) - 3) * TILE_SIZE;
     p.vx = 0; p.vy = 0;
     p.invincible = 120;
     p.socket.emit('die', { score: p.score });
