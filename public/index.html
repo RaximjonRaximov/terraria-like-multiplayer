@@ -3,18 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Terraria-like Multiplayer</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>Mario-like Multiplayer</title>
+  <link rel="stylesheet" href="game.css" />
 </head>
 <body>
-  <div id="ui">
-    <h1>Terraria-like Multiplayer</h1>
-    <p>Move: A/D or arrows | Jump: W/Space | Mine: Left click | Build: Right click</p>
-    <p id="status">Connecting...</p>
-    <input id="name" type="text" placeholder="Your name" maxlength="20" />
-  </div>
   <canvas id="game"></canvas>
+  <div id="ui">
+    <div id="scores"></div>
+    <div id="status">Connecting...</div>
+    <div id="controls-hint">A/D or arrows • W/Space/Up to jump</div>
+  </div>
+  <div id="win" class="hidden">🏁 <span id="winner">Somebody</span> finished!</div>
+  <div id="touch-controls">
+    <div class="dpad">
+      <button id="btn-left" aria-label="left">◀</button>
+      <button id="btn-right" aria-label="right">▶</button>
+    </div>
+    <button id="btn-jump" aria-label="jump">JUMP</button>
+  </div>
   <script src="/socket.io/socket.io.js"></script>
-  <script src="client.js"></script>
+  <script src="game.js"></script>
 </body>
 </html>
