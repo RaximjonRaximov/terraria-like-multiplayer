@@ -765,11 +765,18 @@ function drawPlayer(p) {
     ctx.fillRect(x, y, w, h);
   }
 
+  // health bar
+  const hp = p.health / p.maxHealth;
+  ctx.fillStyle = '#374151';
+  ctx.fillRect(x, y - 12, w, 5);
+  ctx.fillStyle = hp > 0.5 ? '#22c55e' : (hp > 0.25 ? '#facc15' : '#ef4444');
+  ctx.fillRect(x + 1, y - 11, (w - 2) * hp, 3);
+
   // name tag
   ctx.fillStyle = '#fff';
   ctx.font = '12px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText(p.name, x + w / 2, y - 6);
+  ctx.fillText(p.name, x + w / 2, y - 16);
 }
 
 function drawWorld() {

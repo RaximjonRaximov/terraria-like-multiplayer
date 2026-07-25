@@ -591,10 +591,11 @@ class Room {
 
   updatePlayer(p) {
     const input = p.input || {};
+    const biome = this.biomeAt(p.x);
     const accel = 0.8;
     const maxSpeed = p.starTimer > 0 ? 10 : 6;
-    const jump = p.starTimer > 0 ? -17 : (p.wingTimer > 0 ? -14 : -14);
-    const gravity = 0.65, friction = 0.88;
+    const jump = p.starTimer > 0 ? -17 : -14;
+    const gravity = 0.65, friction = biome === 'snow' ? 0.965 : 0.88;
     if (p.starTimer > 0) { p.starTimer--; p.invincible = Math.max(p.invincible, 1); }
     if (p.wingTimer > 0) p.wingTimer--;
     if (input.left) p.vx -= accel;
@@ -680,6 +681,12 @@ class Room {
   isSolid(gx, gy) {
     const t = this.globalTile(gx, gy);
     return SOLID[t] || false;
+  }
+
+  biomeAt(x) {
+    const cx = Math.floor(x / CHUNK_W / TILE_SIZE);
+    const chunk = this.chunks.get(cx);
+    return chunk ? chunk.biome : 'grass';
   }
 
   checkCollectibles(p) {
