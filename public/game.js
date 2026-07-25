@@ -66,6 +66,7 @@ const ui = {
   hudDist: document.getElementById('hud-dist'),
   hudMission: document.getElementById('hud-mission'),
   hudBiome: document.getElementById('hud-biome'),
+  hudFps: document.getElementById('hud-fps'),
   health: document.getElementById('health'),
   players: document.getElementById('players'),
   banner: document.getElementById('banner')
@@ -843,9 +844,19 @@ function drawWorld() {
   }
 }
 
+let fpsFrameCount = 0;
+let fpsLastTime = performance.now();
+
 function gameLoop() {
   if (!state.inGame) return;
   state.frame++;
+  fpsFrameCount++;
+  const now = performance.now();
+  if (now - fpsLastTime >= 1000) {
+    ui.hudFps.textContent = Math.round(fpsFrameCount * 1000 / (now - fpsLastTime));
+    fpsFrameCount = 0;
+    fpsLastTime = now;
+  }
 
   const me = state.players.get(state.me);
   if (me) {
