@@ -521,7 +521,7 @@ class Room {
         x: other.x, y: other.y, vx: other.vx, vy: other.vy,
         w: other.w, h: other.h,
         score: other.score, health: other.health, maxHealth: other.maxHealth,
-        invincible: other.invincible, facing: other.vx >= 0 ? 1 : -1
+        invincible: other.invincible, grounded: other.grounded, facing: other.vx >= 0 ? 1 : -1
       });
     }
 
@@ -542,7 +542,7 @@ class Room {
       x: p.x, y: p.y, vx: p.vx, vy: p.vy,
       w: p.w, h: p.h,
       score: p.score, health: p.health, maxHealth: p.maxHealth,
-      invincible: p.invincible, facing: p.vx >= 0 ? 1 : -1,
+      invincible: p.invincible, grounded: p.grounded, facing: p.vx >= 0 ? 1 : -1,
       distance: p.distance, self: true
     };
   }
@@ -641,6 +641,7 @@ class Room {
           c.collected = true;
           p.coins++;
           p.score += 10;
+          this.events.push({ type: 'coin', x: c.x, y: c.y });
         }
       }
     }
@@ -696,6 +697,7 @@ class Room {
           p.vy = -10;
           p.score += 20;
           p.kills++;
+          this.events.push({ type: 'stomp', x: e.x + e.w / 2, y: e.y + e.h / 2 });
         } else {
           this.damage(p, 1, e.type);
         }

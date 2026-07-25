@@ -79,6 +79,36 @@ const state = {
 };
 
 let assets = {};
+const particles = [];
+
+class Particle {
+  constructor(x, y, vx, vy, life, color, size) {
+    this.x = x; this.y = y; this.vx = vx; this.vy = vy;
+    this.life = life; this.maxLife = life;
+    this.color = color; this.size = size || 3;
+  }
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vy += 0.2;
+    this.life--;
+  }
+  draw(ctx) {
+    const a = this.life / this.maxLife;
+    ctx.globalAlpha = a;
+    ctx.fillStyle = this.color;
+    ctx.fillRect(this.x - state.camera.x, this.y - state.camera.y, this.size, this.size);
+    ctx.globalAlpha = 1;
+  }
+}
+
+function spawnParticles(x, y, count, color, speed = 3, size = 3) {
+  for (let i = 0; i < count; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const sp = Math.random() * speed;
+    particles.push(new Particle(x, y, Math.cos(a) * sp, Math.sin(a) * sp - 2, 30 + Math.random() * 20, color, size));
+  }
+}
 
 class Sprite {
   constructor(img, frameSize, cols, rows, frames) {
@@ -265,17 +295,35 @@ socket.on('game-start', (data) => {
 socket.on('state', (data) => {
   if (!state.inGame) return;
   for (const c of data.chunks) addChunk(c);
+
+  const prevPlayers = new Map(state.players);
   state.players.clear();
-  for (const p of data.players) state.players.set(p.id, p);
+  for (const p of data.players) {
+    state.players.set(p.id, p);
+    const prev = prevPlayers.get(p.id);
+    p.prevGrounded = prev ? prev.grounded : false;
+    if (prev && prev.grounded && !p.grounded && p.vy < 0) {
+      spawnParticles(p.x + p.w / 2, p.y + p.h, 6, '#e2e8f0', 2, 2);
+    }
+  }
+
   state.entities.clear();
   for (const e of data.entities) state.entities.set(e.id, e);
+
   state.mission = data.mission;
+  const prevBiome = state.biome;
   state.biome = currentBiome();
+  if (prevBiome && state.biome !== prevBiome) {
+    showBanner(state.biome.toUpperCase() + ' biome!', 2500);
+  }
   updateHUD();
+
   if (data.events) {
     for (const ev of data.events) {
-      if (ev.type === 'switch') showBanner('Gate opened!');
-      if (ev.type === 'mission-complete') showBanner('Mission complete! +' + ev.reward);
+      if (ev.type === 'switch') { showBanner('Gate opened!'); spawnParticles(ev.x, ev.y, 15, '#facc15', 4); }
+      if (ev.type === 'mission-complete') { showBanner('Mission complete! +' + ev.reward); spawnParticles(canvas.width / 2 + state.camera.x, canvas.height / 2 + state.camera.y, 30, '#fbbf24', 6); }
+      if (ev.type === 'coin') { spawnParticles(ev.x, ev.y, 5, '#facc15', 3, 2); }
+      if (ev.type === 'stomp') { spawnParticles(ev.x, ev.y, 10, '#94a3b8', 3, 3); }
     }
   }
 });
@@ -362,12 +410,30 @@ function drawSky() {
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // distant hills
-  ctx.fillStyle = 'rgba(255,255,255,0.1)';
+  // clouds
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  for (let i = 0; i < 6; i++) {
+    const cx = ((i * 300 - state.camera.x * 0.05) % (canvas.width + 400)) - 200;
+    const cy = 60 + Math.sin(i + state.frame * 0.01) * 20;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 40, 0, Math.PI * 2);
+    ctx.arc(cx + 30, cy - 10, 50, 0, Math.PI * 2);
+    ctx.arc(cx + 70, cy, 40, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // parallax hills/trees per biome
+  drawParallaxLayer('rgba(255,255,255,0.08)', 0.15, 150, 40, 3);
+  drawParallaxLayer('rgba(255,255,255,0.12)', 0.35, 100, 30, 2);
+}
+
+function drawParallaxLayer(color, speed, height, amp, freq) {
+  ctx.fillStyle = color;
   ctx.beginPath();
   ctx.moveTo(0, canvas.height);
-  for (let x = 0; x <= canvas.width; x += 40) {
-    const y = canvas.height - 120 - Math.sin((x + state.camera.x * 0.2) / 200) * 40;
+  for (let x = 0; x <= canvas.width; x += 20) {
+    const worldX = x + state.camera.x * speed;
+    const y = canvas.height - height - Math.sin(worldX / (100 * freq)) * amp - Math.cos(worldX / (60 * freq)) * amp * 0.5;
     ctx.lineTo(x, y);
   }
   ctx.lineTo(canvas.width, canvas.height);
@@ -547,10 +613,17 @@ function gameLoop() {
   state.camera.y += (state.camera.targetY - state.camera.y) * 0.12;
   if (state.camera.x < 0) state.camera.x = 0;
 
+  // update particles
+  for (let i = particles.length - 1; i >= 0; i--) {
+    particles[i].update();
+    if (particles[i].life <= 0) particles.splice(i, 1);
+  }
+
   drawSky();
   drawWorld();
   for (const e of state.entities.values()) drawEntity(e);
   for (const p of state.players.values()) drawPlayer(p);
+  for (const pt of particles) pt.draw(ctx);
 
   requestAnimationFrame(gameLoop);
 }
