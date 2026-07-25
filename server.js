@@ -331,7 +331,9 @@ class Room {
       distance: 0,
       mission: null,
       checkpointChunk: 0,
-      checkpointTx: 3
+      checkpointTx: 3,
+      combo: 0,
+      comboTimer: 0
     };
     this.players.set(socket.id, p);
     this.sockets.set(socket.id, socket);
@@ -633,6 +635,7 @@ class Room {
 
     p.distance = Math.max(p.distance, p.x);
     if (p.invincible > 0) p.invincible--;
+    if (p.comboTimer > 0) { p.comboTimer--; if (p.comboTimer <= 0) p.combo = 0; }
 
     this.checkCollectibles(p);
     this.checkHazards(p);
@@ -826,9 +829,11 @@ class Room {
         if (!rectIntersect(p.x, p.y, p.w, p.h, e.x, e.y, e.w, e.h)) continue;
         if (p.starTimer > 0) {
           e.dead = true;
-          p.score += 20; p.kills++;
+          p.combo++; p.comboTimer = 180;
+          p.score += 20 * p.combo; p.kills++;
           chunk.addCoin(e.x + e.w / 2, e.y + e.h / 4);
           this.events.push({ type: 'stomp', x: e.x + e.w / 2, y: e.y + e.h / 2 });
+          if (p.combo > 1) this.events.push({ type: 'combo', combo: p.combo, x: e.x + e.w / 2, y: e.y });
           continue;
         }
         const playerBottom = p.y + p.h;
@@ -836,9 +841,11 @@ class Room {
         if (p.vy > 0 && playerBottom > e.y + 4 && prevPlayerBottom <= e.y + e.h * 0.6) {
           e.dead = true;
           p.vy = -10;
-          p.score += 20; p.kills++;
+          p.combo++; p.comboTimer = 180;
+          p.score += 20 * p.combo; p.kills++;
           chunk.addCoin(e.x + e.w / 2, e.y + e.h / 4);
           this.events.push({ type: 'stomp', x: e.x + e.w / 2, y: e.y + e.h / 2 });
+          if (p.combo > 1) this.events.push({ type: 'combo', combo: p.combo, x: e.x + e.w / 2, y: e.y });
         } else {
           this.damage(p, 1, e.type);
         }
@@ -864,6 +871,8 @@ class Room {
     p.starTimer = 0;
     p.wingTimer = 0;
     p.airJumps = 0;
+    p.combo = 0;
+    p.comboTimer = 0;
     p.score = Math.max(0, p.score - 50);
     const gx = p.checkpointChunk * CHUNK_W + p.checkpointTx;
     p.x = gx * TILE_SIZE;

@@ -476,6 +476,7 @@ socket.on('state', (data) => {
       if (ev.type === 'mission-complete') { showBanner('Mission complete! +' + ev.reward); spawnParticles(canvas.width / 2 + state.camera.x, canvas.height / 2 + state.camera.y, 30, '#fbbf24', 6); playSound('flag'); }
       if (ev.type === 'coin') { spawnParticles(ev.x, ev.y, 5, '#facc15', 3, 2); playSound('coin'); }
       if (ev.type === 'stomp') { spawnParticles(ev.x, ev.y, 10, '#94a3b8', 3, 3); playSound('stomp'); }
+      if (ev.type === 'combo') { showBanner('Combo x' + ev.combo + '!', 1200); playSound('coin'); }
       if (ev.type === 'heart') { spawnParticles(ev.x, ev.y, 8, '#ef4444', 3, 3); showBanner('+Health'); playSound('coin'); }
       if (ev.type === 'star') { spawnParticles(ev.x, ev.y, 12, '#facc15', 5, 4); showBanner('Star Power!'); playSound('star'); }
       if (ev.type === 'wing') { spawnParticles(ev.x, ev.y, 10, '#38bdf8', 4, 3); showBanner('Double Jump!'); playSound('jump'); }
