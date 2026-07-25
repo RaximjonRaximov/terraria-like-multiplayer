@@ -593,7 +593,8 @@ class Room {
     const input = p.input || {};
     const biome = this.biomeAt(p.x);
     const accel = 0.8;
-    const maxSpeed = p.starTimer > 0 ? 10 : 6;
+    const running = (p.input || {}).run;
+    const maxSpeed = p.starTimer > 0 ? 10 : (running ? 9 : 6);
     const jump = p.starTimer > 0 ? -17 : -14;
     const gravity = 0.65, friction = biome === 'snow' ? 0.965 : 0.88;
     if (p.starTimer > 0) { p.starTimer--; p.invincible = Math.max(p.invincible, 1); }

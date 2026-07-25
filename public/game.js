@@ -554,7 +554,8 @@ function updateHUD() {
 const keyMap = {
   ArrowLeft: 'left', KeyA: 'left',
   ArrowRight: 'right', KeyD: 'right',
-  ArrowUp: 'jump', KeyW: 'jump', Space: 'jump'
+  ArrowUp: 'jump', KeyW: 'jump', Space: 'jump',
+  ShiftLeft: 'run', ShiftRight: 'run'
 };
 window.addEventListener('keydown', (e) => {
   initAudio();
