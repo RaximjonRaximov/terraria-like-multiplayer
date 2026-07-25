@@ -35,14 +35,16 @@ const T = {
   SWITCH: 6,
   GATE: 7,
   POLE: 8,
-  FLAG: 9
+  FLAG: 9,
+  QUESTION: 10
 };
 
 const SOLID = {
   [T.GROUND]: true,
   [T.BRICK]: true,
   [T.PIPE]: true,
-  [T.GATE]: true
+  [T.GATE]: true,
+  [T.QUESTION]: true
 };
 const ONE_WAY = { [T.PLATFORM]: true };
 const HAZARD = { [T.SPIKE]: true };
@@ -128,7 +130,7 @@ class Chunk {
       if (kind < 0.25) {
         // brick/question block
         const y = g - 4 - Math.floor(rng() * 2);
-        if (this.getTile(tx, y) === T.AIR) this.setTile(tx, y, rng() < 0.3 ? T.BRICK : T.BRICK);
+        if (this.getTile(tx, y) === T.AIR) this.setTile(tx, y, rng() < 0.4 ? T.QUESTION : T.BRICK);
       } else if (kind < 0.55) {
         // platform with coins
         const y = g - 5 - Math.floor(rng() * 4);
@@ -588,7 +590,7 @@ class Room {
     p.vx *= friction;
     p.vx = clamp(p.vx, -maxSpeed, maxSpeed);
     if (p.grounded && input.jump) { p.vy = jump; p.grounded = false; p.airJumps = p.wingTimer > 0 ? 1 : 0; }
-    else if (!p.grounded && input.jump && p.wingTimer > 0 && p.airJumps > 0) { p.vy = jump; p.airJumps--; }
+    else if (!p.grounded && input.jump && p.vy > 0 && p.wingTimer > 0 && p.airJumps > 0) { p.vy = jump; p.airJumps--; }
     p.vy += gravity;
 
     p.prevY = p.y;
@@ -718,10 +720,23 @@ class Room {
     const bottom = Math.floor((p.y + p.h) / TILE_SIZE);
     for (let tx = Math.max(0, left); tx <= Math.min(CHUNK_W - 1, right); tx++) {
       for (let ty = top; ty <= bottom; ty++) {
-        if (chunk.getTile(tx, ty) === T.SWITCH && p.vy < 0) {
+        const tile = chunk.getTile(tx, ty);
+        if (tile === T.SWITCH && p.vy < 0) {
           this.toggleGates();
           chunk.setTile(tx, ty, T.AIR);
           this.events.push({ type: 'switch', x: (cx * CHUNK_W + tx) * TILE_SIZE, y: ty * TILE_SIZE });
+        } else if (tile === T.QUESTION && p.vy < 0) {
+          chunk.setTile(tx, ty, T.BRICK);
+          const roll = Math.random();
+          const px = (cx * CHUNK_W + tx) * TILE_SIZE + TILE_SIZE / 2;
+          const py = (ty - 1) * TILE_SIZE + TILE_SIZE / 2;
+          if (roll < 0.25) chunk.addPowerUp('heart', px, py);
+          else if (roll < 0.5) chunk.addPowerUp('star', px, py);
+          else if (roll < 0.75) chunk.addPowerUp('wing', px, py);
+          else {
+            for (let i = 0; i < 3; i++) chunk.addCoin(px + (i - 1) * 10, py);
+          }
+          this.events.push({ type: 'switch', x: px, y: ty * TILE_SIZE }); // reuse sound event
         }
       }
     }
@@ -859,7 +874,8 @@ class Room {
     const nextX = e.x + e.vx * e.dir;
     const front = e.dir > 0 ? Math.floor((nextX + e.w) / TILE_SIZE) : Math.floor(nextX / TILE_SIZE);
     const midY = Math.floor((e.y + e.h / 2) / TILE_SIZE);
-    if (this.isSolid(front, midY) || this.isSolid(front, midY + 1)) e.dir *= -1; else e.x = nextX;
+    const belowY = Math.floor((e.y + e.h) / TILE_SIZE) + 1;
+    if (this.isSolid(front, midY) || this.isSolid(front, midY + 1) || !this.isGround(front, belowY)) e.dir *= -1; else e.x = nextX;
     e.sawAngle += 0.2;
   }
 

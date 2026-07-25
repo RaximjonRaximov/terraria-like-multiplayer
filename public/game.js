@@ -591,6 +591,16 @@ function drawTile(tx, ty, t, biome) {
     ctx.strokeStyle = '#cbd5e1';
     ctx.lineWidth = 2;
     ctx.strokeRect(x, y, TILE_SIZE, TILE_SIZE);
+  } else if (t === T.QUESTION) {
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+    ctx.fillStyle = '#78350f';
+    ctx.font = 'bold 20px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('?', x + TILE_SIZE / 2, y + TILE_SIZE / 2 + 2);
+    ctx.strokeStyle = '#b45309';
+    ctx.strokeRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
   } else if (t === T.POLE) {
     ctx.fillStyle = '#f8fafc';
     ctx.fillRect(x + 12, y, 8, TILE_SIZE);
