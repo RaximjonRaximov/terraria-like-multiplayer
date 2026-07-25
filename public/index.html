@@ -3,23 +3,60 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Mario-like Multiplayer</title>
+  <title>Endless Mario Multiplayer</title>
   <link rel="stylesheet" href="game.css" />
 </head>
 <body>
-  <canvas id="game"></canvas>
-  <div id="ui">
-    <div id="scores"></div>
-    <div id="status">Connecting...</div>
-    <div id="controls-hint">A/D or arrows • W/Space/Up to jump</div>
-  </div>
-  <div id="win" class="hidden">🏁 <span id="winner">Somebody</span> finished!</div>
-  <div id="touch-controls">
-    <div class="dpad">
-      <button id="btn-left" aria-label="left">◀</button>
-      <button id="btn-right" aria-label="right">▶</button>
+  <div id="app">
+    <div id="lobby" class="screen active">
+      <div class="card">
+        <h1>Endless Run</h1>
+        <p class="subtitle">Mario uslubidagi cheksiz multiplayer platformer</p>
+        <div class="form">
+          <input id="player-name" type="text" placeholder="Ismingiz" maxlength="20" />
+          <button id="btn-create" class="primary">Xona yaratish (Host)</button>
+          <div class="or">yoki</div>
+          <input id="room-code" type="text" placeholder="Xona kodi" maxlength="6" />
+          <button id="btn-join" class="secondary">Qo'shilish</button>
+        </div>
+        <div id="room-list">
+          <h3>Ochiq xonalar</h3>
+          <div id="rooms"></div>
+        </div>
+      </div>
     </div>
-    <button id="btn-jump" aria-label="jump">JUMP</button>
+
+    <div id="room" class="screen">
+      <div class="card">
+        <h2>Xona: <span id="room-id">---</span></h2>
+        <div id="room-players"></div>
+        <button id="btn-start" class="primary hidden">O'yinni boshlash</button>
+        <button id="btn-leave" class="secondary">Chiqish</button>
+      </div>
+    </div>
+
+    <div id="game" class="screen">
+      <canvas id="canvas"></canvas>
+      <div id="hud">
+        <div id="hud-left">
+          <div id="health"></div>
+          <div id="stats">Coins: <span id="hud-coins">0</span> Score: <span id="hud-score">0</span></div>
+          <div id="mission">Mission: <span id="hud-mission">---</span></div>
+        </div>
+        <div id="hud-right">
+          <div id="biome">Biome: <span id="hud-biome">---</span></div>
+          <div id="players"></div>
+        </div>
+      </div>
+      <div id="touch-controls">
+        <div class="dpad">
+          <button id="btn-left" aria-label="left">◀</button>
+          <button id="btn-right" aria-label="right">▶</button>
+        </div>
+        <button id="btn-jump" aria-label="jump">JUMP</button>
+      </div>
+      <div id="banner" class="hidden"></div>
+    </div>
   </div>
   <script src="/socket.io/socket.io.js"></script>
   <script src="game.js"></script>
