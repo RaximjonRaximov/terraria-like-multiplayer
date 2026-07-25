@@ -1,7 +1,7 @@
 {
   "name": "terraria-like-multiplayer",
   "version": "1.0.0",
-  "description": "Browser-based multiplayer 2D sandbox game inspired by Terraria",
+  "description": "Browser-based multiplayer 2D Mario-like platformer",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
