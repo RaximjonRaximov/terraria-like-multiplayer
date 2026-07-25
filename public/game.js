@@ -900,6 +900,20 @@ function gameLoop() {
   for (const pt of particles) pt.draw(ctx);
   drawWeather();
 
+  // cave lighting vignette
+  if (state.biome === 'cave') {
+    const me = state.players.get(state.me);
+    if (me) {
+      const sx = me.x + me.w / 2 - state.camera.x;
+      const sy = me.y + me.h / 2 - state.camera.y;
+      const grad = ctx.createRadialGradient(sx, sy, 50, sx, sy, 420);
+      grad.addColorStop(0, 'rgba(0,0,0,0)');
+      grad.addColorStop(1, 'rgba(0,0,0,0.6)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+  }
+
   requestAnimationFrame(gameLoop);
 }
 
