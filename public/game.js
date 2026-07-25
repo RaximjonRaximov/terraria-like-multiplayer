@@ -324,6 +324,8 @@ socket.on('state', (data) => {
       if (ev.type === 'mission-complete') { showBanner('Mission complete! +' + ev.reward); spawnParticles(canvas.width / 2 + state.camera.x, canvas.height / 2 + state.camera.y, 30, '#fbbf24', 6); }
       if (ev.type === 'coin') { spawnParticles(ev.x, ev.y, 5, '#facc15', 3, 2); }
       if (ev.type === 'stomp') { spawnParticles(ev.x, ev.y, 10, '#94a3b8', 3, 3); }
+      if (ev.type === 'heart') { spawnParticles(ev.x, ev.y, 8, '#ef4444', 3, 3); showBanner('+Health'); }
+      if (ev.type === 'star') { spawnParticles(ev.x, ev.y, 12, '#facc15', 5, 4); showBanner('Star Power!'); }
     }
   }
 });
@@ -376,6 +378,21 @@ function updateHUD() {
   ui.hudBiome.textContent = state.biome;
   updateHealth(me.health, me.maxHealth);
   setMissionText(state.mission);
+  if (me.starTimer > 0) {
+    if (!document.getElementById('hud-star')) {
+      const s = document.createElement('div');
+      s.id = 'hud-star';
+      s.textContent = '⭐ ' + Math.ceil(me.starTimer / 60) + 's';
+      s.style.color = '#facc15';
+      s.style.fontSize = '13px';
+      document.getElementById('hud-left').appendChild(s);
+    } else {
+      document.getElementById('hud-star').textContent = '⭐ ' + Math.ceil(me.starTimer / 60) + 's';
+    }
+  } else {
+    const s = document.getElementById('hud-star');
+    if (s) s.remove();
+  }
   let list = '';
   for (const p of state.players.values()) {
     if (p.id === state.me) list += `<div><b>${p.name}</b>: ${p.score}</div>`;
@@ -526,11 +543,44 @@ function drawSaw(e) {
   ctx.restore();
 }
 
+function drawHeart(x, y, w, h) {
+  ctx.fillStyle = '#ef4444';
+  const s = Math.min(w, h);
+  ctx.save();
+  ctx.translate(x + w / 2, y + h / 2);
+  ctx.scale(s / 18, s / 18);
+  ctx.beginPath();
+  ctx.moveTo(0, 4);
+  ctx.bezierCurveTo(-8, -6, -16, 2, 0, 14);
+  ctx.bezierCurveTo(16, 2, 8, -6, 0, 4);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawStar(cx, cy, r, color) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2 - Math.PI / 2;
+    const rr = i % 2 === 0 ? r : r * 0.45;
+    const px = cx + Math.cos(a) * rr;
+    const py = cy + Math.sin(a) * rr;
+    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+  ctx.fill();
+}
+
 function drawEntity(e) {
   const x = e.x - state.camera.x;
   const y = e.y - state.camera.y;
   if (e.type === 'coin') return drawCoin(e);
   if (e.type === 'saw') return drawSaw(e);
+  if (e.type === 'heart') return drawHeart(x, y, e.w, e.h);
+  if (e.type === 'star') {
+    const pulse = 1 + Math.sin(state.frame * 0.15) * 0.15;
+    return drawStar(x + e.w / 2, y + e.h / 2, (e.w / 2) * pulse, '#facc15');
+  }
 
   let sprite = null;
   if (e.type === 'walker' || e.type === 'jumper' || e.type === 'spikebug') sprite = assets.slime;
@@ -568,6 +618,10 @@ function drawPlayer(p) {
     ctx.globalAlpha = p.invincible > 0 && Math.floor(state.frame / 4) % 2 === 0 ? 0.5 : 1;
     assets.player.draw(ctx, sx, sy, sw, sh, frame, flip);
     ctx.globalAlpha = 1;
+    if (p.starTimer > 0) {
+      ctx.fillStyle = `hsla(${state.frame * 8 % 360}, 100%, 50%, 0.25)`;
+      ctx.fillRect(x - 4, y - 4, w + 8, h + 8);
+    }
   } else {
     ctx.fillStyle = p.color;
     ctx.fillRect(x, y, w, h);

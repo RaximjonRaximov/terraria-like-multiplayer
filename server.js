@@ -196,6 +196,9 @@ class Chunk {
         else if (pattern === 1) this.addCoin(tx * TILE_SIZE + TILE_SIZE / 2, (g - 2 - k) * TILE_SIZE + TILE_SIZE / 2);
         else this.addCoin((tx + (k % 2)) * TILE_SIZE + TILE_SIZE / 2, (g - 2 - Math.floor(k / 2)) * TILE_SIZE + TILE_SIZE / 2);
       }
+      // powerups occasionally above coin arcs
+      if (rng() < 0.12) this.addPowerUp('heart', tx * TILE_SIZE + TILE_SIZE / 2, (g - 6) * TILE_SIZE + TILE_SIZE / 2);
+      if (rng() < 0.08) this.addPowerUp('star', tx * TILE_SIZE + TILE_SIZE / 2, (g - 7) * TILE_SIZE + TILE_SIZE / 2);
     }
   }
 
@@ -209,6 +212,16 @@ class Chunk {
       id: this.room.nextEntityId++,
       type: 'coin',
       x: px, y: py, w: 16, h: 16,
+      collected: false,
+      chunkX: this.cx
+    });
+  }
+
+  addPowerUp(kind, px, py) {
+    this.entities.push({
+      id: this.room.nextEntityId++,
+      type: kind,
+      x: px, y: py, w: 20, h: 20,
       collected: false,
       chunkX: this.cx
     });
@@ -280,6 +293,7 @@ class Room {
       score: 0, coins: 0, kills: 0,
       health: 3, maxHealth: 3,
       invincible: 0,
+      starTimer: 0,
       grounded: false,
       input: {},
       loadedChunks: new Set(),
@@ -521,7 +535,7 @@ class Room {
         x: other.x, y: other.y, vx: other.vx, vy: other.vy,
         w: other.w, h: other.h,
         score: other.score, health: other.health, maxHealth: other.maxHealth,
-        invincible: other.invincible, grounded: other.grounded, facing: other.vx >= 0 ? 1 : -1
+        invincible: other.invincible, starTimer: other.starTimer, grounded: other.grounded, facing: other.vx >= 0 ? 1 : -1
       });
     }
 
@@ -542,14 +556,18 @@ class Room {
       x: p.x, y: p.y, vx: p.vx, vy: p.vy,
       w: p.w, h: p.h,
       score: p.score, health: p.health, maxHealth: p.maxHealth,
-      invincible: p.invincible, grounded: p.grounded, facing: p.vx >= 0 ? 1 : -1,
+      invincible: p.invincible, starTimer: p.starTimer, grounded: p.grounded, facing: p.vx >= 0 ? 1 : -1,
       distance: p.distance, self: true
     };
   }
 
   updatePlayer(p) {
     const input = p.input || {};
-    const accel = 0.8, maxSpeed = 6, jump = -14, gravity = 0.65, friction = 0.88;
+    const accel = 0.8;
+    const maxSpeed = p.starTimer > 0 ? 10 : 6;
+    const jump = p.starTimer > 0 ? -17 : -14;
+    const gravity = 0.65, friction = 0.88;
+    if (p.starTimer > 0) { p.starTimer--; p.invincible = Math.max(p.invincible, 1); }
     if (input.left) p.vx -= accel;
     if (input.right) p.vx += accel;
     p.vx *= friction;
@@ -570,7 +588,7 @@ class Room {
     p.distance = Math.max(p.distance, p.x);
     if (p.invincible > 0) p.invincible--;
 
-    this.checkCoins(p);
+    this.checkCollectibles(p);
     this.checkHazards(p);
     this.checkEnemies(p);
     this.checkSwitches(p);
@@ -633,15 +651,25 @@ class Room {
     return SOLID[t] || false;
   }
 
-  checkCoins(p) {
+  checkCollectibles(p) {
     for (const chunk of this.chunks.values()) {
       for (const c of chunk.entities) {
-        if (c.type !== 'coin' || c.collected) continue;
-        if (rectIntersect(p.x, p.y, p.w, p.h, c.x - 8, c.y - 8, 16, 16)) {
+        if (c.collected) continue;
+        const w = c.w || 16, h = c.h || 16;
+        if (!rectIntersect(p.x, p.y, p.w, p.h, c.x - w / 2, c.y - h / 2, w, h)) continue;
+        if (c.type === 'coin') {
           c.collected = true;
-          p.coins++;
-          p.score += 10;
+          p.coins++; p.score += 10;
           this.events.push({ type: 'coin', x: c.x, y: c.y });
+        } else if (c.type === 'heart') {
+          c.collected = true;
+          p.health = Math.min(p.health + 1, p.maxHealth);
+          this.events.push({ type: 'heart', x: c.x, y: c.y });
+        } else if (c.type === 'star') {
+          c.collected = true;
+          p.starTimer = 360; // 6 seconds
+          p.score += 50;
+          this.events.push({ type: 'star', x: c.x, y: c.y });
         }
       }
     }
@@ -688,15 +716,20 @@ class Room {
   checkEnemies(p) {
     for (const chunk of this.chunks.values()) {
       for (const e of chunk.entities) {
-        if (e.dead || e.collected || e.type === 'coin') continue;
+        if (e.dead || e.collected || e.type === 'coin' || e.type === 'heart' || e.type === 'star') continue;
         if (!rectIntersect(p.x, p.y, p.w, p.h, e.x, e.y, e.w, e.h)) continue;
+        if (p.starTimer > 0) {
+          e.dead = true;
+          p.score += 20; p.kills++;
+          this.events.push({ type: 'stomp', x: e.x + e.w / 2, y: e.y + e.h / 2 });
+          continue;
+        }
         const playerBottom = p.y + p.h;
         const prevPlayerBottom = p.prevY + p.h;
         if (p.vy > 0 && playerBottom > e.y + 4 && prevPlayerBottom <= e.y + e.h * 0.6) {
           e.dead = true;
           p.vy = -10;
-          p.score += 20;
-          p.kills++;
+          p.score += 20; p.kills++;
           this.events.push({ type: 'stomp', x: e.x + e.w / 2, y: e.y + e.h / 2 });
         } else {
           this.damage(p, 1, e.type);
@@ -706,7 +739,7 @@ class Room {
   }
 
   damage(p, amount, source) {
-    if (p.invincible > 0) return;
+    if (p.invincible > 0 || p.starTimer > 0) return;
     p.health -= amount;
     p.invincible = 60; // ~1s
     p.vy = -6;
@@ -720,6 +753,7 @@ class Room {
 
   respawn(p) {
     p.health = p.maxHealth;
+    p.starTimer = 0;
     p.score = Math.max(0, p.score - 50);
     p.x = 3 * TILE_SIZE;
     p.y = (this.findGroundY(3) - 3) * TILE_SIZE;
