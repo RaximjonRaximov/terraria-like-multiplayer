@@ -137,6 +137,7 @@ button.hidden { display: none; }
   touch-action: manipulation;
 }
 #touch-controls #btn-jump { font-size: 15px; padding: 18px 26px; }
+#touch-controls #btn-run { font-size: 13px; padding: 14px 18px; background: rgba(59, 130, 246, 0.55); }
 .dpad { display: flex; gap: 8px; pointer-events: auto; }
 
 #banner {

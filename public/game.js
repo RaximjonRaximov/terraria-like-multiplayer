@@ -346,6 +346,7 @@ function bindTouch(id, action) {
 bindTouch('btn-left', 'left');
 bindTouch('btn-right', 'right');
 bindTouch('btn-jump', 'jump');
+bindTouch('btn-run', 'run');
 
 function saveName() {
   try { localStorage.setItem('endlessPlayerName', ui.inputName.value.trim()); } catch (e) {}
