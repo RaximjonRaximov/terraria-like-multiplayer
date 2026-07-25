@@ -76,7 +76,8 @@ const ui = {
   lobbyBest: document.getElementById('lobby-best'),
   chat: document.getElementById('chat'),
   chatLog: document.getElementById('chat-log'),
-  chatInput: document.getElementById('chat-input')
+  chatInput: document.getElementById('chat-input'),
+  mute: document.getElementById('mute')
 };
 
 const socket = io();
@@ -164,13 +165,15 @@ function drawWeather() {
 }
 
 let audioCtx = null;
+let muted = false;
 function initAudio() {
+  if (muted) return;
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
 }
 
 function playSound(type) {
-  if (!audioCtx) return;
+  if (muted || !audioCtx) return;
   if (audioCtx.state === 'suspended') audioCtx.resume();
   const now = audioCtx.currentTime;
   const osc = audioCtx.createOscillator();
@@ -409,6 +412,14 @@ ui.btnJoin.addEventListener('click', () => { initAudio(); saveName(); joinRoom()
 ui.btnLeave.addEventListener('click', leaveRoom);
 ui.btnStart.addEventListener('click', () => { initAudio(); startGame(); });
 ui.inputCode.addEventListener('keydown', (e) => { if (e.key === 'Enter') { initAudio(); saveName(); joinRoom(); } });
+if (ui.mute) {
+  ui.mute.addEventListener('click', () => {
+    muted = !muted;
+    ui.mute.textContent = muted ? '🔇' : '🔊';
+    if (muted && audioCtx) audioCtx.suspend();
+    else initAudio();
+  });
+}
 
 function createRoom() {
   const name = ui.inputName.value.trim();

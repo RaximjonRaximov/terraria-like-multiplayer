@@ -106,6 +106,7 @@ button.hidden { display: none; }
 #hud-left, #hud-right { display: flex; flex-direction: column; gap: 4px; }
 #hud-left { align-items: flex-start; }
 #hud-right { align-items: flex-end; }
+#mute { background: rgba(15,23,42,0.6); border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 8px; padding: 4px 8px; font-size: 14px; cursor: pointer; pointer-events: auto; }
 
 #health { display: flex; gap: 3px; }
 .heart { color: #ef4444; font-size: 18px; }
