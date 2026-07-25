@@ -70,6 +70,7 @@ const ui = {
   hudMission: document.getElementById('hud-mission'),
   hudBiome: document.getElementById('hud-biome'),
   hudFps: document.getElementById('hud-fps'),
+  hudPing: document.getElementById('hud-ping'),
   health: document.getElementById('health'),
   players: document.getElementById('players'),
   banner: document.getElementById('banner'),
@@ -458,6 +459,7 @@ socket.on('game-start', (data) => {
 
 socket.on('state', (data) => {
   if (!state.inGame) return;
+  state.ping = Date.now() - data.time;
   for (const c of data.chunks) addChunk(c);
 
   const prevPlayers = new Map(state.players);
@@ -572,6 +574,7 @@ function updateHUD() {
     ui.hudBest.textContent = best;
   } catch (e) {}
   ui.hudBiome.textContent = state.biome;
+  ui.hudPing.textContent = state.ping || '-';
   updateHealth(me.health, me.maxHealth);
   setMissionText(state.mission);
   if (me.starTimer > 0) {
