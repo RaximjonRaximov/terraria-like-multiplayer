@@ -200,6 +200,7 @@ class Chunk {
       // powerups occasionally above coin arcs
       if (rng() < 0.12) this.addPowerUp('heart', tx * TILE_SIZE + TILE_SIZE / 2, (g - 6) * TILE_SIZE + TILE_SIZE / 2);
       if (rng() < 0.08) this.addPowerUp('star', tx * TILE_SIZE + TILE_SIZE / 2, (g - 7) * TILE_SIZE + TILE_SIZE / 2);
+      if (rng() < 0.06) this.addPowerUp('wing', tx * TILE_SIZE + TILE_SIZE / 2, (g - 5) * TILE_SIZE + TILE_SIZE / 2);
     }
 
     // biome transition flag pole at the end of each biome (last chunk)
@@ -305,6 +306,8 @@ class Room {
       health: 3, maxHealth: 3,
       invincible: 0,
       starTimer: 0,
+      wingTimer: 0,
+      airJumps: 0,
       grounded: false,
       input: {},
       loadedChunks: new Set(),
@@ -546,7 +549,7 @@ class Room {
         x: other.x, y: other.y, vx: other.vx, vy: other.vy,
         w: other.w, h: other.h,
         score: other.score, health: other.health, maxHealth: other.maxHealth,
-        invincible: other.invincible, starTimer: other.starTimer, grounded: other.grounded, facing: other.vx >= 0 ? 1 : -1
+        invincible: other.invincible, starTimer: other.starTimer, wingTimer: other.wingTimer, grounded: other.grounded, facing: other.vx >= 0 ? 1 : -1
       });
     }
 
@@ -567,7 +570,7 @@ class Room {
       x: p.x, y: p.y, vx: p.vx, vy: p.vy,
       w: p.w, h: p.h,
       score: p.score, health: p.health, maxHealth: p.maxHealth,
-      invincible: p.invincible, starTimer: p.starTimer, grounded: p.grounded, facing: p.vx >= 0 ? 1 : -1,
+      invincible: p.invincible, starTimer: p.starTimer, wingTimer: p.wingTimer, grounded: p.grounded, facing: p.vx >= 0 ? 1 : -1,
       distance: p.distance, self: true
     };
   }
@@ -576,14 +579,16 @@ class Room {
     const input = p.input || {};
     const accel = 0.8;
     const maxSpeed = p.starTimer > 0 ? 10 : 6;
-    const jump = p.starTimer > 0 ? -17 : -14;
+    const jump = p.starTimer > 0 ? -17 : (p.wingTimer > 0 ? -14 : -14);
     const gravity = 0.65, friction = 0.88;
     if (p.starTimer > 0) { p.starTimer--; p.invincible = Math.max(p.invincible, 1); }
+    if (p.wingTimer > 0) p.wingTimer--;
     if (input.left) p.vx -= accel;
     if (input.right) p.vx += accel;
     p.vx *= friction;
     p.vx = clamp(p.vx, -maxSpeed, maxSpeed);
-    if (p.grounded && input.jump) { p.vy = jump; p.grounded = false; }
+    if (p.grounded && input.jump) { p.vy = jump; p.grounded = false; p.airJumps = p.wingTimer > 0 ? 1 : 0; }
+    else if (!p.grounded && input.jump && p.wingTimer > 0 && p.airJumps > 0) { p.vy = jump; p.airJumps--; }
     p.vy += gravity;
 
     p.prevY = p.y;
@@ -682,6 +687,12 @@ class Room {
           p.starTimer = 360; // 6 seconds
           p.score += 50;
           this.events.push({ type: 'star', x: c.x, y: c.y });
+        } else if (c.type === 'wing') {
+          c.collected = true;
+          p.wingTimer = 420; // 7 seconds
+          p.airJumps = 1;
+          p.score += 50;
+          this.events.push({ type: 'wing', x: c.x, y: c.y });
         }
       }
     }
@@ -747,7 +758,7 @@ class Room {
   checkEnemies(p) {
     for (const chunk of this.chunks.values()) {
       for (const e of chunk.entities) {
-        if (e.dead || e.collected || e.type === 'coin' || e.type === 'heart' || e.type === 'star') continue;
+        if (e.dead || e.collected || e.type === 'coin' || e.type === 'heart' || e.type === 'star' || e.type === 'wing') continue;
         if (!rectIntersect(p.x, p.y, p.w, p.h, e.x, e.y, e.w, e.h)) continue;
         if (p.starTimer > 0) {
           e.dead = true;
@@ -785,6 +796,8 @@ class Room {
   respawn(p) {
     p.health = p.maxHealth;
     p.starTimer = 0;
+    p.wingTimer = 0;
+    p.airJumps = 0;
     p.score = Math.max(0, p.score - 50);
     p.x = 3 * TILE_SIZE;
     p.y = (this.findGroundY(3) - 3) * TILE_SIZE;

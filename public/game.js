@@ -392,6 +392,7 @@ socket.on('state', (data) => {
       if (ev.type === 'stomp') { spawnParticles(ev.x, ev.y, 10, '#94a3b8', 3, 3); playSound('stomp'); }
       if (ev.type === 'heart') { spawnParticles(ev.x, ev.y, 8, '#ef4444', 3, 3); showBanner('+Health'); playSound('coin'); }
       if (ev.type === 'star') { spawnParticles(ev.x, ev.y, 12, '#facc15', 5, 4); showBanner('Star Power!'); playSound('star'); }
+      if (ev.type === 'wing') { spawnParticles(ev.x, ev.y, 10, '#38bdf8', 4, 3); showBanner('Double Jump!'); playSound('jump'); }
       if (ev.type === 'flag') { spawnParticles(ev.x, ev.y, 20, '#fbbf24', 5); showBanner(ev.biome + ' flag! +100', 2500); playSound('flag'); }
     }
   }
@@ -465,6 +466,21 @@ function updateHUD() {
   } else {
     const s = document.getElementById('hud-star');
     if (s) s.remove();
+  }
+  if (me.wingTimer > 0) {
+    if (!document.getElementById('hud-wing')) {
+      const w = document.createElement('div');
+      w.id = 'hud-wing';
+      w.textContent = '🪽 ' + Math.ceil(me.wingTimer / 60) + 's';
+      w.style.color = '#38bdf8';
+      w.style.fontSize = '13px';
+      document.getElementById('hud-left').appendChild(w);
+    } else {
+      document.getElementById('hud-wing').textContent = '🪽 ' + Math.ceil(me.wingTimer / 60) + 's';
+    }
+  } else {
+    const w = document.getElementById('hud-wing');
+    if (w) w.remove();
   }
   let list = '';
   for (const p of state.players.values()) {
@@ -661,6 +677,18 @@ function drawStar(cx, cy, r, color) {
   ctx.fill();
 }
 
+function drawWing(x, y, w, h) {
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.beginPath();
+  ctx.ellipse(x + w * 0.2, y + h * 0.4, w * 0.35, h * 0.15, -0.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(x + w * 0.8, y + h * 0.4, w * 0.35, h * 0.15, 0.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#38bdf8';
+  ctx.fillRect(x + w * 0.35, y + h * 0.25, w * 0.3, h * 0.3);
+}
+
 function drawEntity(e) {
   const x = e.x - state.camera.x;
   const y = e.y - state.camera.y;
@@ -671,6 +699,7 @@ function drawEntity(e) {
     const pulse = 1 + Math.sin(state.frame * 0.15) * 0.15;
     return drawStar(x + e.w / 2, y + e.h / 2, (e.w / 2) * pulse, '#facc15');
   }
+  if (e.type === 'wing') return drawWing(x, y, e.w, e.h);
 
   let sprite = null;
   if (e.type === 'walker' || e.type === 'jumper' || e.type === 'spikebug') sprite = assets.slime;
@@ -711,6 +740,15 @@ function drawPlayer(p) {
     if (p.starTimer > 0) {
       ctx.fillStyle = `hsla(${state.frame * 8 % 360}, 100%, 50%, 0.25)`;
       ctx.fillRect(x - 4, y - 4, w + 8, h + 8);
+    }
+    if (p.wingTimer > 0) {
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.beginPath();
+      ctx.ellipse(sx + sw * 0.15, sy + sh * 0.35, 10, 6, -0.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(sx + sw * 0.85, sy + sh * 0.35, 10, 6, 0.4, 0, Math.PI * 2);
+      ctx.fill();
     }
   } else {
     ctx.fillStyle = p.color;
