@@ -54,6 +54,7 @@ const ui = {
   inputCode: document.getElementById('room-code'),
   hudCoins: document.getElementById('hud-coins'),
   hudScore: document.getElementById('hud-score'),
+  hudDist: document.getElementById('hud-dist'),
   hudMission: document.getElementById('hud-mission'),
   hudBiome: document.getElementById('hud-biome'),
   health: document.getElementById('health'),
@@ -107,6 +108,59 @@ function spawnParticles(x, y, count, color, speed = 3, size = 3) {
     const a = Math.random() * Math.PI * 2;
     const sp = Math.random() * speed;
     particles.push(new Particle(x, y, Math.cos(a) * sp, Math.sin(a) * sp - 2, 30 + Math.random() * 20, color, size));
+  }
+}
+
+let audioCtx = null;
+function initAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function playSound(type) {
+  if (!audioCtx) return;
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+
+  const beep = (startFreq, endFreq, dur, vol, wave = 'sine') => {
+    osc.type = wave;
+    osc.frequency.setValueAtTime(startFreq, now);
+    if (endFreq > startFreq) osc.frequency.linearRampToValueAtTime(endFreq, now + dur);
+    else osc.frequency.exponentialRampToValueAtTime(Math.max(endFreq, 1), now + dur);
+    gain.gain.setValueAtTime(vol, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + dur);
+    osc.start(now);
+    osc.stop(now + dur);
+  };
+
+  if (type === 'coin') beep(1200, 1800, 0.12, 0.08);
+  if (type === 'jump') beep(200, 450, 0.15, 0.06, 'square');
+  if (type === 'stomp') beep(180, 70, 0.14, 0.12, 'triangle');
+  if (type === 'flag') {
+    [523, 659, 784, 1047].forEach((f, i) => {
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.connect(g); g.connect(audioCtx.destination);
+      o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.08, now + i * 0.08);
+      g.gain.exponentialRampToValueAtTime(0.01, now + i * 0.08 + 0.18);
+      o.start(now + i * 0.08); o.stop(now + i * 0.08 + 0.18);
+    });
+  }
+  if (type === 'star') {
+    for (let i = 0; i < 4; i++) {
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.connect(g); g.connect(audioCtx.destination);
+      o.type = 'square'; o.frequency.value = 880 + i * 220;
+      g.gain.setValueAtTime(0.05, now + i * 0.05);
+      g.gain.exponentialRampToValueAtTime(0.01, now + i * 0.05 + 0.1);
+      o.start(now + i * 0.05); o.stop(now + i * 0.05 + 0.1);
+    }
   }
 }
 
@@ -241,7 +295,7 @@ function bindTouch(id, action) {
   const btn = document.getElementById(id);
   if (!btn) return;
   const set = (v) => { input[action] = v; };
-  ['pointerdown', 'touchstart'].forEach(ev => btn.addEventListener(ev, (e) => { e.preventDefault(); set(true); }));
+  ['pointerdown', 'touchstart'].forEach(ev => btn.addEventListener(ev, (e) => { e.preventDefault(); initAudio(); set(true); }));
   ['pointerup', 'pointerleave', 'touchend', 'touchcancel'].forEach(ev => btn.addEventListener(ev, (e) => { e.preventDefault(); set(false); }));
 }
 bindTouch('btn-left', 'left');
@@ -249,13 +303,14 @@ bindTouch('btn-right', 'right');
 bindTouch('btn-jump', 'jump');
 
 ui.btnCreate.addEventListener('click', () => {
+  initAudio();
   const name = ui.inputName.value.trim();
   socket.emit('create-room', { playerName: name, name: name || undefined });
 });
-ui.btnJoin.addEventListener('click', () => joinRoom());
+ui.btnJoin.addEventListener('click', () => { initAudio(); joinRoom(); });
 ui.btnLeave.addEventListener('click', leaveRoom);
-ui.btnStart.addEventListener('click', startGame);
-ui.inputCode.addEventListener('keydown', (e) => { if (e.key === 'Enter') joinRoom(); });
+ui.btnStart.addEventListener('click', () => { initAudio(); startGame(); });
+ui.inputCode.addEventListener('keydown', (e) => { if (e.key === 'Enter') { initAudio(); joinRoom(); } });
 
 function createRoom() {
   const name = ui.inputName.value.trim();
@@ -304,6 +359,7 @@ socket.on('state', (data) => {
     p.prevGrounded = prev ? prev.grounded : false;
     if (prev && prev.grounded && !p.grounded && p.vy < 0) {
       spawnParticles(p.x + p.w / 2, p.y + p.h, 6, '#e2e8f0', 2, 2);
+      playSound('jump');
     }
   }
 
@@ -321,12 +377,12 @@ socket.on('state', (data) => {
   if (data.events) {
     for (const ev of data.events) {
       if (ev.type === 'switch') { showBanner('Gate opened!'); spawnParticles(ev.x, ev.y, 15, '#facc15', 4); }
-      if (ev.type === 'mission-complete') { showBanner('Mission complete! +' + ev.reward); spawnParticles(canvas.width / 2 + state.camera.x, canvas.height / 2 + state.camera.y, 30, '#fbbf24', 6); }
-      if (ev.type === 'coin') { spawnParticles(ev.x, ev.y, 5, '#facc15', 3, 2); }
-      if (ev.type === 'stomp') { spawnParticles(ev.x, ev.y, 10, '#94a3b8', 3, 3); }
-      if (ev.type === 'heart') { spawnParticles(ev.x, ev.y, 8, '#ef4444', 3, 3); showBanner('+Health'); }
-      if (ev.type === 'star') { spawnParticles(ev.x, ev.y, 12, '#facc15', 5, 4); showBanner('Star Power!'); }
-      if (ev.type === 'flag') { spawnParticles(ev.x, ev.y, 20, '#fbbf24', 5); showBanner(ev.biome + ' flag! +100', 2500); }
+      if (ev.type === 'mission-complete') { showBanner('Mission complete! +' + ev.reward); spawnParticles(canvas.width / 2 + state.camera.x, canvas.height / 2 + state.camera.y, 30, '#fbbf24', 6); playSound('flag'); }
+      if (ev.type === 'coin') { spawnParticles(ev.x, ev.y, 5, '#facc15', 3, 2); playSound('coin'); }
+      if (ev.type === 'stomp') { spawnParticles(ev.x, ev.y, 10, '#94a3b8', 3, 3); playSound('stomp'); }
+      if (ev.type === 'heart') { spawnParticles(ev.x, ev.y, 8, '#ef4444', 3, 3); showBanner('+Health'); playSound('coin'); }
+      if (ev.type === 'star') { spawnParticles(ev.x, ev.y, 12, '#facc15', 5, 4); showBanner('Star Power!'); playSound('star'); }
+      if (ev.type === 'flag') { spawnParticles(ev.x, ev.y, 20, '#fbbf24', 5); showBanner(ev.biome + ' flag! +100', 2500); playSound('flag'); }
     }
   }
 });
@@ -376,6 +432,7 @@ function updateHUD() {
   if (!me) return;
   ui.hudCoins.textContent = me.coins || 0;
   ui.hudScore.textContent = me.score || 0;
+  ui.hudDist.textContent = Math.floor((me.distance || 0) / 10);
   ui.hudBiome.textContent = state.biome;
   updateHealth(me.health, me.maxHealth);
   setMissionText(state.mission);
@@ -408,6 +465,7 @@ const keyMap = {
   ArrowUp: 'jump', KeyW: 'jump', Space: 'jump'
 };
 window.addEventListener('keydown', (e) => {
+  initAudio();
   const a = keyMap[e.code];
   if (a) { input[a] = true; e.preventDefault(); }
 });
