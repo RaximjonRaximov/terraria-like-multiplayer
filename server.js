@@ -856,6 +856,7 @@ class Room {
   damage(p, amount, source) {
     if (p.invincible > 0 || p.starTimer > 0) return;
     p.health -= amount;
+    p.combo = 0; p.comboTimer = 0;
     p.invincible = 60; // ~1s
     p.vy = -6;
     if (source && source.x !== undefined) {
@@ -863,6 +864,7 @@ class Room {
     } else {
       p.vx = -p.vx || -2;
     }
+    this.events.push({ type: 'hurt', x: p.x, y: p.y });
     if (p.health <= 0) this.respawn(p);
   }
 

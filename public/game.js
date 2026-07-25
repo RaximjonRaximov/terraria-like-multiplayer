@@ -191,6 +191,8 @@ function playSound(type) {
   if (type === 'coin') beep(1200, 1800, 0.12, 0.08);
   if (type === 'jump') beep(200, 450, 0.15, 0.06, 'square');
   if (type === 'stomp') beep(180, 70, 0.14, 0.12, 'triangle');
+  if (type === 'hurt') beep(250, 120, 0.18, 0.1, 'square');
+  if (type === 'die') beep(300, 50, 0.55, 0.12, 'sawtooth');
   if (type === 'flag') {
     [523, 659, 784, 1047].forEach((f, i) => {
       const o = audioCtx.createOscillator();
@@ -476,6 +478,7 @@ socket.on('state', (data) => {
       if (ev.type === 'mission-complete') { showBanner('Mission complete! +' + ev.reward); spawnParticles(canvas.width / 2 + state.camera.x, canvas.height / 2 + state.camera.y, 30, '#fbbf24', 6); playSound('flag'); }
       if (ev.type === 'coin') { spawnParticles(ev.x, ev.y, 5, '#facc15', 3, 2); playSound('coin'); }
       if (ev.type === 'stomp') { spawnParticles(ev.x, ev.y, 10, '#94a3b8', 3, 3); playSound('stomp'); }
+      if (ev.type === 'hurt') { playSound('hurt'); }
       if (ev.type === 'combo') { showBanner('Combo x' + ev.combo + '!', 1200); playSound('coin'); }
       if (ev.type === 'heart') { spawnParticles(ev.x, ev.y, 8, '#ef4444', 3, 3); showBanner('+Health'); playSound('coin'); }
       if (ev.type === 'star') { spawnParticles(ev.x, ev.y, 12, '#facc15', 5, 4); showBanner('Star Power!'); playSound('star'); }
@@ -485,7 +488,7 @@ socket.on('state', (data) => {
   }
 });
 
-socket.on('die', () => { showBanner('You died! Score penalty', 2500); });
+socket.on('die', () => { showBanner('You died! Score penalty', 2500); playSound('die'); });
 socket.on('tile-update', (d) => { if (d && d.gx !== undefined) setTileAt(d.gx, d.gy, d.t); });
 socket.on('gates-open', () => {
   showBanner('Gates opened!');
