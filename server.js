@@ -799,6 +799,7 @@ class Room {
         if (p.starTimer > 0) {
           e.dead = true;
           p.score += 20; p.kills++;
+          chunk.addCoin(e.x + e.w / 2, e.y + e.h / 4);
           this.events.push({ type: 'stomp', x: e.x + e.w / 2, y: e.y + e.h / 2 });
           continue;
         }
@@ -808,6 +809,7 @@ class Room {
           e.dead = true;
           p.vy = -10;
           p.score += 20; p.kills++;
+          chunk.addCoin(e.x + e.w / 2, e.y + e.h / 4);
           this.events.push({ type: 'stomp', x: e.x + e.w / 2, y: e.y + e.h / 2 });
         } else {
           this.damage(p, 1, e.type);
