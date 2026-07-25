@@ -1,0 +1,54 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #1a202c;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #fff;
+}
+
+#game {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+}
+
+#ui {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 10;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 10px 14px;
+  border-radius: 8px;
+  pointer-events: none;
+  user-select: none;
+}
+
+#ui h1 {
+  font-size: 18px;
+  margin: 0 0 6px;
+}
+
+#ui p {
+  font-size: 13px;
+  margin: 4px 0;
+  opacity: 0.9;
+}
+
+#name {
+  pointer-events: auto;
+  margin-top: 6px;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  outline: none;
+}
+
+#name::placeholder {
+  color: rgba(255,255,255,0.6);
+}
