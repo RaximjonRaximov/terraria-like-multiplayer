@@ -326,6 +326,7 @@ socket.on('state', (data) => {
       if (ev.type === 'stomp') { spawnParticles(ev.x, ev.y, 10, '#94a3b8', 3, 3); }
       if (ev.type === 'heart') { spawnParticles(ev.x, ev.y, 8, '#ef4444', 3, 3); showBanner('+Health'); }
       if (ev.type === 'star') { spawnParticles(ev.x, ev.y, 12, '#facc15', 5, 4); showBanner('Star Power!'); }
+      if (ev.type === 'flag') { spawnParticles(ev.x, ev.y, 20, '#fbbf24', 5); showBanner(ev.biome + ' flag! +100', 2500); }
     }
   }
 });
@@ -501,6 +502,22 @@ function drawTile(tx, ty, t, biome) {
     ctx.strokeStyle = '#cbd5e1';
     ctx.lineWidth = 2;
     ctx.strokeRect(x, y, TILE_SIZE, TILE_SIZE);
+  } else if (t === T.POLE) {
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(x + 12, y, 8, TILE_SIZE);
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillRect(x + 8, y + TILE_SIZE - 4, TILE_SIZE - 16, 4);
+  } else if (t === T.FLAG) {
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE * 0.6);
+    ctx.fillStyle = '#b91c1c';
+    ctx.beginPath();
+    ctx.moveTo(x + TILE_SIZE, y);
+    ctx.lineTo(x + TILE_SIZE, y + TILE_SIZE * 0.6);
+    ctx.lineTo(x + TILE_SIZE / 2, y + TILE_SIZE * 0.3);
+    ctx.fill();
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(x + 14, y + TILE_SIZE * 0.6, 4, TILE_SIZE * 0.4);
   }
 }
 

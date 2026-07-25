@@ -76,6 +76,7 @@ class Chunk {
     this.tiles = new Uint8Array(CHUNK_W * CHUNK_H);
     this.entities = [];
     this.loadedBy = new Set();
+    this.flagsCollected = new Set();
     this.generate();
   }
 
@@ -199,6 +200,16 @@ class Chunk {
       // powerups occasionally above coin arcs
       if (rng() < 0.12) this.addPowerUp('heart', tx * TILE_SIZE + TILE_SIZE / 2, (g - 6) * TILE_SIZE + TILE_SIZE / 2);
       if (rng() < 0.08) this.addPowerUp('star', tx * TILE_SIZE + TILE_SIZE / 2, (g - 7) * TILE_SIZE + TILE_SIZE / 2);
+    }
+
+    // biome transition flag pole at the end of each biome (last chunk)
+    if (this.cx > 0 && (this.cx + 1) % BIOME_LENGTH_CHUNKS === 0) {
+      const flagX = CHUNK_W - 5;
+      const g = this.findGroundY(flagX);
+      if (g > 5 && g < CHUNK_H - 3) {
+        for (let dy = 0; dy < 6; dy++) this.setTile(flagX, g - 1 - dy, T.POLE);
+        this.setTile(flagX + 1, g - 7, T.FLAG);
+      }
     }
   }
 
@@ -592,6 +603,7 @@ class Room {
     this.checkHazards(p);
     this.checkEnemies(p);
     this.checkSwitches(p);
+    this.checkFlags(p);
   }
 
   resolveX(p, w, h) {
@@ -699,6 +711,25 @@ class Room {
           this.toggleGates();
           chunk.setTile(tx, ty, T.AIR);
           this.events.push({ type: 'switch', x: (cx * CHUNK_W + tx) * TILE_SIZE, y: ty * TILE_SIZE });
+        }
+      }
+    }
+  }
+
+  checkFlags(p) {
+    const cx = Math.floor(p.x / CHUNK_W / TILE_SIZE);
+    const chunk = this.chunks.get(cx);
+    if (!chunk) return;
+    const left = Math.floor(p.x / TILE_SIZE) - cx * CHUNK_W;
+    const right = Math.floor((p.x + p.w) / TILE_SIZE) - cx * CHUNK_W;
+    const top = Math.floor(p.y / TILE_SIZE);
+    const bottom = Math.floor((p.y + p.h) / TILE_SIZE);
+    for (let tx = Math.max(0, left); tx <= Math.min(CHUNK_W - 1, right); tx++) {
+      for (let ty = top; ty <= bottom; ty++) {
+        if (chunk.getTile(tx, ty) === T.FLAG && !chunk.flagsCollected.has(p.id)) {
+          chunk.flagsCollected.add(p.id);
+          p.score += 100;
+          this.events.push({ type: 'flag', x: (cx * CHUNK_W + tx) * TILE_SIZE, y: ty * TILE_SIZE, biome: chunk.biome });
         }
       }
     }
