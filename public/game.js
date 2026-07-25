@@ -71,7 +71,8 @@ const ui = {
   hudFps: document.getElementById('hud-fps'),
   health: document.getElementById('health'),
   players: document.getElementById('players'),
-  banner: document.getElementById('banner')
+  banner: document.getElementById('banner'),
+  lobbyBest: document.getElementById('lobby-best')
 };
 
 const socket = io();
@@ -356,7 +357,11 @@ function saveName() {
 function loadName() {
   try { ui.inputName.value = localStorage.getItem('endlessPlayerName') || ''; } catch (e) {}
 }
+function loadHighScore() {
+  try { ui.lobbyBest.textContent = localStorage.getItem('endlessHighScore') || '0'; } catch (e) {}
+}
 loadName();
+loadHighScore();
 
 ui.btnCreate.addEventListener('click', () => {
   initAudio();
