@@ -1,32 +1,35 @@
-# Mario-like Multiplayer
+# Endless Run — Mario-like Multiplayer
 
-A browser-based 2D multiplayer platformer inspired by classic Mario gameplay. Built with Node.js, Express, Socket.IO, and HTML5 Canvas.
+Browserda ishlaydigan, cheksiz, biomli, real-time multiplayer 2D platformer. Node.js + Express + Socket.IO + HTML5 Canvas.
 
-## Features
+## Yangi imkoniyatlar
 
-- Real-time multiplayer with Socket.IO
-- Procedurally generated side-scrolling level with ground, platforms, pipes, pits
-- Coins to collect, walking enemies to stomp, and a flagpole finish
-- Platformer physics (gravity, collision, jumping, one-way platforms)
-- Camera follows the player and only draws visible tiles for smooth performance
-- Touch controls for mobile
-- Scoreboard and win banner
+- Host/Join lobby: 6 ta belgidan iborat xona kodi, 4 kishigacha
+- Cheksiz chunk-based dunyo: o'tish, cho'qqilar, platformalar, quvurlar, tuzoqlar
+- 5 xil biome: grass, desert, snow, cave, forest
+- Mission tizimi: coins, kills, distance, score
+- Piksel-art uslubidagi robot player, slime va bat dushmanlar (animatsiyali)
+- Power-up'lar: heart (+HP), star (o'ldiruvchi immunitet), wing (double jump)
+- Tuzoq va jumboqlar: spike, saw, gate + switch, flag pole
+- Particles, parallax background, Web Audio sound effects
+- Mobil uchun touch tugmalar
+- Local high score va ismni eslab qolish
 
-## Controls
+## Boshqaruv
 
-- **Move:** A/D or Arrow Left/Right
-- **Jump:** W, Arrow Up, or Space
-- **Mobile:** use the on-screen left/right/jump buttons
+- Harakat: A/D yoki chap/o'ng strelka
+- Sakrash: W, yuqori strelka, Space
+- Mobil: ekrandagi chap/o'ng/jump tugmalari
 
-## Run locally
+## Ishga tushirish
 
 ```bash
 npm install
 npm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser. Open a second tab to see other players.
+[http://localhost:3000](http://localhost:3000) oching. Ikkinchi tabda boshqa o'yinchi qo'shishingiz mumkin.
 
 ## Deploy
 
-The server can be deployed to any Node.js host. Set the `PORT` environment variable if needed.
+Istalgan Node.js hosting'ga joylash mumkin. `PORT` o'zgaruvchisini sozlash mumkin.
