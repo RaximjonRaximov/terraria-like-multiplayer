@@ -82,6 +82,7 @@ const state = {
 
 let assets = {};
 const particles = [];
+const weather = [];
 
 class Particle {
   constructor(x, y, vx, vy, life, color, size) {
@@ -110,6 +111,40 @@ function spawnParticles(x, y, count, color, speed = 3, size = 3) {
     const sp = Math.random() * speed;
     particles.push(new Particle(x, y, Math.cos(a) * sp, Math.sin(a) * sp - 2, 30 + Math.random() * 20, color, size));
   }
+}
+
+function updateWeather() {
+  const biome = state.biome;
+  const spawnChance = biome === 'snow' ? 0.4 : (biome === 'forest' ? 0.12 : 0);
+  if (spawnChance > 0 && Math.random() < spawnChance) {
+    const isSnow = biome === 'snow';
+    weather.push({
+      x: state.camera.x + Math.random() * canvas.width,
+      y: state.camera.y - 5,
+      vx: isSnow ? 0.4 : -0.4,
+      vy: isSnow ? 1.8 : 0.8,
+      life: isSnow ? 140 : 100,
+      color: isSnow ? '#ffffff' : '#a3e635',
+      size: isSnow ? 2 : 3
+    });
+  }
+  for (let i = weather.length - 1; i >= 0; i--) {
+    const w = weather[i];
+    w.x += w.vx; w.y += w.vy; w.life--;
+    if (w.y > state.camera.y + canvas.height || w.life <= 0) weather.splice(i, 1);
+  }
+}
+
+function drawWeather() {
+  for (const w of weather) {
+    const a = Math.min(1, w.life / 50);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = w.color;
+    ctx.beginPath();
+    ctx.arc(w.x - state.camera.x, w.y - state.camera.y, w.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
 }
 
 let audioCtx = null;
@@ -817,12 +852,14 @@ function gameLoop() {
     particles[i].update();
     if (particles[i].life <= 0) particles.splice(i, 1);
   }
+  updateWeather();
 
   drawSky();
   drawWorld();
   for (const e of state.entities.values()) drawEntity(e);
   for (const p of state.players.values()) drawPlayer(p);
   for (const pt of particles) pt.draw(ctx);
+  drawWeather();
 
   requestAnimationFrame(gameLoop);
 }
