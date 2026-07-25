@@ -239,6 +239,15 @@ class Chunk {
         this.setTile(flagX + 1, g - 7, T.FLAG);
       }
     }
+
+    // boss every 3 biomes (BIOME_LENGTH_CHUNKS * 3 chunks)
+    if (this.cx > 0 && (this.cx + 1) % (BIOME_LENGTH_CHUNKS * 3) === 0) {
+      const bossX = CHUNK_W - 8;
+      const g = this.findGroundY(bossX);
+      if (g > 10 && g < CHUNK_H - 4) {
+        this.addEnemy('boss', (this.cx * CHUNK_W + bossX) * TILE_SIZE, g * TILE_SIZE - 70);
+      }
+    }
   }
 
   findGroundY(tx) {
@@ -272,6 +281,7 @@ class Chunk {
     if (kind === 'jumper') { w = 30; h = 34; vx = 1.0; }
     if (kind === 'spikebug') { w = 32; h = 26; vx = 1.4; }
     if (kind === 'saw') { w = 34; h = 34; vx = 1.6; }
+    if (kind === 'boss') { w = 64; h = 64; vx = 0.9; hp = 5; }
     this.entities.push({
       id: this.room.nextEntityId++,
       type: kind,
@@ -537,7 +547,7 @@ class Room {
         if (e.collected || e.dead) continue;
         arr.push({
           id: e.id, type: e.type, x: e.x, y: e.y, w: e.w, h: e.h,
-          dir: e.dir, sawAngle: e.sawAngle
+          dir: e.dir, sawAngle: e.sawAngle, hp: e.hp
         });
       }
     }
@@ -554,7 +564,7 @@ class Room {
         if (dist2(e.x + e.w / 2, e.y + e.h / 2, px + p.w / 2, py + p.h / 2) < r2) {
           arr.push({
             id: e.id, type: e.type, x: e.x, y: e.y, w: e.w, h: e.h,
-            dir: e.dir, sawAngle: e.sawAngle
+            dir: e.dir, sawAngle: e.sawAngle, hp: e.hp
           });
         }
       }
@@ -850,13 +860,26 @@ class Room {
         const playerBottom = p.y + p.h;
         const prevPlayerBottom = p.prevY + p.h;
         if (p.vy > 0 && playerBottom > e.y + 4 && prevPlayerBottom <= e.y + e.h * 0.6) {
-          e.dead = true;
-          p.vy = -10;
-          p.combo++; p.comboTimer = 180;
-          p.score += 20 * p.combo; p.kills++;
-          chunk.addCoin(e.x + e.w / 2, e.y + e.h / 4);
-          this.events.push({ type: 'stomp', x: e.x + e.w / 2, y: e.y + e.h / 2 });
-          if (p.combo > 1) this.events.push({ type: 'combo', combo: p.combo, x: e.x + e.w / 2, y: e.y });
+          if (e.type === 'boss') {
+            e.hp--; p.vy = -10; p.score += 30;
+            this.events.push({ type: 'stomp', x: e.x + e.w / 2, y: e.y + e.h / 2 });
+            if (e.hp <= 0) {
+              e.dead = true;
+              p.combo++; p.comboTimer = 180;
+              p.score += 200; p.kills++;
+              for (let i = 0; i < 10; i++) chunk.addCoin(e.x + e.w / 2 + (i - 5) * 12, e.y + e.h / 2);
+              this.events.push({ type: 'boss-dead', x: e.x + e.w / 2, y: e.y + e.h / 2 });
+              if (p.combo > 1) this.events.push({ type: 'combo', combo: p.combo, x: e.x + e.w / 2, y: e.y });
+            }
+          } else {
+            e.dead = true;
+            p.vy = -10;
+            p.combo++; p.comboTimer = 180;
+            p.score += 20 * p.combo; p.kills++;
+            chunk.addCoin(e.x + e.w / 2, e.y + e.h / 4);
+            this.events.push({ type: 'stomp', x: e.x + e.w / 2, y: e.y + e.h / 2 });
+            if (p.combo > 1) this.events.push({ type: 'combo', combo: p.combo, x: e.x + e.w / 2, y: e.y });
+          }
         } else {
           this.damage(p, 1, e.type);
         }
@@ -924,6 +947,7 @@ class Room {
         else if (e.type === 'flyer') this.updateFlyer(e);
         else if (e.type === 'spikebug') this.updateSpikebug(e);
         else if (e.type === 'saw') this.updateSaw(e);
+        else if (e.type === 'boss') this.updateBoss(e);
       }
     }
   }
@@ -970,6 +994,22 @@ class Room {
     const belowY = Math.floor((e.y + e.h) / TILE_SIZE) + 1;
     if (this.isSolid(front, midY) || this.isSolid(front, midY + 1) || !this.isGround(front, belowY)) e.dir *= -1; else e.x = nextX;
     e.sawAngle += 0.2;
+  }
+
+  updateBoss(e) {
+    e.prevY = e.y;
+    e.vy += 0.65;
+    e.y += e.vy;
+    this.resolveEntityY(e);
+    // patrol with occasional jump
+    e.jumpTimer--;
+    if (e.grounded && e.jumpTimer <= 0) { e.vy = -14; e.grounded = false; e.jumpTimer = 120 + Math.random() * 120; }
+    const nextX = e.x + e.vx * e.dir;
+    const front = e.dir > 0 ? Math.floor((nextX + e.w) / TILE_SIZE) : Math.floor(nextX / TILE_SIZE);
+    const midY = Math.floor((e.y + e.h / 2) / TILE_SIZE);
+    const footY = Math.floor((e.y + e.h) / TILE_SIZE) + 1;
+    const frontFootX = e.dir > 0 ? Math.floor((nextX + e.w) / TILE_SIZE) + 1 : Math.floor(nextX / TILE_SIZE) - 1;
+    if (this.isSolid(front, midY) || !this.isGround(frontFootX, footY)) e.dir *= -1; else e.x = nextX;
   }
 
   resolveEntityY(e) {

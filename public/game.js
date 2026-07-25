@@ -480,6 +480,7 @@ socket.on('state', (data) => {
       if (ev.type === 'stomp') { spawnParticles(ev.x, ev.y, 10, '#94a3b8', 3, 3); playSound('stomp'); }
       if (ev.type === 'hurt') { playSound('hurt'); }
       if (ev.type === 'combo') { showBanner('Combo x' + ev.combo + '!', 1200); playSound('coin'); }
+      if (ev.type === 'boss-dead') { showBanner('BOSS DEFEATED! +200', 2500); spawnParticles(ev.x, ev.y, 40, '#f97316', 6); playSound('stomp'); }
       if (ev.type === 'heart') { spawnParticles(ev.x, ev.y, 8, '#ef4444', 3, 3); showBanner('+Health'); playSound('coin'); }
       if (ev.type === 'star') { spawnParticles(ev.x, ev.y, 12, '#facc15', 5, 4); showBanner('Star Power!'); playSound('star'); }
       if (ev.type === 'wing') { spawnParticles(ev.x, ev.y, 10, '#38bdf8', 4, 3); showBanner('Double Jump!'); playSound('jump'); }
@@ -831,11 +832,41 @@ function drawWing(x, y, w, h) {
   ctx.fillRect(x + w * 0.35, y + h * 0.25, w * 0.3, h * 0.3);
 }
 
+function drawBoss(e) {
+  const x = e.x - state.camera.x;
+  const y = e.y - state.camera.y;
+  const w = e.w, h = e.h;
+  const maxHp = 5;
+  const hpPct = Math.max(0, (e.hp || maxHp) / maxHp);
+  // body
+  ctx.fillStyle = '#7f1d1d';
+  ctx.fillRect(x, y, w, h);
+  // horns
+  ctx.fillStyle = '#fca5a5';
+  ctx.beginPath();
+  ctx.moveTo(x + 8, y); ctx.lineTo(x - 6, y - 14); ctx.lineTo(x + 16, y + 8); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(x + w - 8, y); ctx.lineTo(x + w + 6, y - 14); ctx.lineTo(x + w - 16, y + 8); ctx.fill();
+  // eyes
+  ctx.fillStyle = '#fef08a';
+  ctx.fillRect(x + 10, y + 18, 14, 10);
+  ctx.fillRect(x + w - 24, y + 18, 14, 10);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(x + 14, y + 20, 6, 6);
+  ctx.fillRect(x + w - 20, y + 20, 6, 6);
+  // hp bar
+  ctx.fillStyle = '#000';
+  ctx.fillRect(x, y - 14, w, 8);
+  ctx.fillStyle = '#ef4444';
+  ctx.fillRect(x + 1, y - 13, (w - 2) * hpPct, 6);
+}
+
 function drawEntity(e) {
   const x = e.x - state.camera.x;
   const y = e.y - state.camera.y;
   if (e.type === 'coin') return drawCoin(e);
   if (e.type === 'saw') return drawSaw(e);
+  if (e.type === 'boss') return drawBoss(e);
   if (e.type === 'heart') return drawHeart(x, y, e.w, e.h);
   if (e.type === 'star') {
     const pulse = 1 + Math.sin(state.frame * 0.15) * 0.15;
