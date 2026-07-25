@@ -220,6 +220,16 @@ class Chunk {
       if (rng() < 0.06) this.addPowerUp('wing', tx * TILE_SIZE + TILE_SIZE / 2, (g - 5) * TILE_SIZE + TILE_SIZE / 2);
     }
 
+    // ensure safe spawn area in first chunk
+    if (this.cx === 0) {
+      for (let tx = 0; tx < 12; tx++) {
+        for (let ty = 0; ty < CHUNK_H; ty++) this.setTile(tx, ty, T.AIR);
+        const h = groundBase + Math.floor(Math.sin(tx / 10) * 3 + Math.cos(tx / 6) * 2);
+        for (let ty = h; ty < CHUNK_H; ty++) this.setTile(tx, ty, T.GROUND);
+      }
+      this.entities = this.entities.filter(e => e.x < 0 || e.x >= 12 * TILE_SIZE || ['coin','heart','star','wing'].includes(e.type));
+    }
+
     // biome transition flag pole at the end of each biome (last chunk)
     if (this.cx > 0 && (this.cx + 1) % BIOME_LENGTH_CHUNKS === 0) {
       const flagX = CHUNK_W - 5;
@@ -678,10 +688,11 @@ class Room {
     if (p.vy > 0) {
       for (let tx = left; tx <= right; tx++) {
         const t = this.globalTile(tx, bottom);
-        if (SOLID[t] || (ONE_WAY[t] && prevBottom <= bottom * TILE_SIZE + 0.1)) {
+        if (SOLID[t] || HAZARD[t] || (ONE_WAY[t] && prevBottom <= bottom * TILE_SIZE + 0.1)) {
           p.y = bottom * TILE_SIZE - h - 0.001;
           p.vy = 0;
           p.grounded = true;
+          if (HAZARD[t]) this.damage(p, 3, 'spike');
           return;
         }
       }
@@ -751,7 +762,7 @@ class Room {
   checkHazards(p) {
     const left = Math.floor(p.x / TILE_SIZE);
     const right = Math.floor((p.x + p.w) / TILE_SIZE);
-    const bottom = Math.floor((p.y + p.h) / TILE_SIZE);
+    const bottom = Math.floor((p.y + p.h + 0.5) / TILE_SIZE);
     for (let tx = left; tx <= right; tx++) {
       const t = this.globalTile(tx, bottom);
       if (HAZARD[t]) this.damage(p, 1, 'spike');
